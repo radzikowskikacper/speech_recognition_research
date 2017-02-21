@@ -8,5 +8,5 @@ public class Constants {
         0 - Sphinx
         1 - Julius
      */
-    public static int aligner = 0;
+    public static int aligner = 1;
 }

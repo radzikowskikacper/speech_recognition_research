@@ -39,7 +39,7 @@ class JuliusModelsTraining extends ModelsTraining{
     }
 
     public void train(String location){
-        
+
     }
 
     private void generateGrammarFile(String fname, List<String> data){

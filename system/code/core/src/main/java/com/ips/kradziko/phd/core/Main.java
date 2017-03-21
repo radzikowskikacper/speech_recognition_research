@@ -1,6 +1,6 @@
 package com.ips.kradziko.phd.core;
 
-import com.ips.kradziko.phd.core.analysis.Alignment;
+import com.ips.kradziko.phd.core.data_handler.DataHandler;
 
 import java.io.IOException;
 
@@ -9,8 +9,8 @@ import java.io.IOException;
  */
 public class Main {
     public static void main(String args[]) throws IOException {
-        Alignment al = new Alignment();
-        al.loadData("/home/kradziko/projects/research/phd/data");
-        System.out.println();
+        DataHandler dh = new DataHandler();
+        dh.loadData("/home/kradziko/projects/research/phd/data");
+        if(true) return;
     }
 }

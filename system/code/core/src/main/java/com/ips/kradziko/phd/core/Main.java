@@ -11,5 +11,6 @@ public class Main {
     public static void main(String args[]) throws IOException {
         Alignment al = new Alignment();
         al.loadData("/home/kradziko/projects/research/phd/data");
+        System.out.println();
     }
 }

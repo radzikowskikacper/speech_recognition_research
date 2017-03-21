@@ -1,6 +1,6 @@
 package com.ips.kradziko.phd.core.analysis;
 
-import org.javatuples.Septet;
+import org.javatuples.Quintet;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -8,10 +8,10 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by kradziko on 17/02/20.
@@ -20,7 +20,8 @@ import java.util.Map;
 
 
 public class Alignment {
-    private Map<String, List<Septet<String, Integer, Double, Double, Double, Double, Double>>> data;
+    private Map<String, Quintet<String, Integer, Double, Double, Double>> data;
+    private Set<String> set1 = new HashSet<>();
 
     public void loadData(String data_dir) throws IOException {
         data = new HashMap<>();
@@ -30,13 +31,11 @@ public class Alignment {
             String sCurrentLine;
 
             while ((sCurrentLine = br.readLine()) != null) {
-                System.out.println(sCurrentLine);
                 String[] parts = sCurrentLine.split("\\.wav");
                 parts[0] = parts[0].trim();
                 parts[0] += ".wav";
-                data.putIfAbsent(parts[0], new ArrayList<>());
-                data.get(parts[0]).add(
-                        new Septet<>(parts[parts.length - 1].trim(), 0, 0.0, 0.0, 0.0, 0.0, 0.0));
+                data.putIfAbsent(parts[0],
+                        new Quintet<>(parts[parts.length - 1].trim(), -1, -1.0, -1.0, -1.0));
             }
         }
 
@@ -45,24 +44,34 @@ public class Alignment {
                     if(!(file.toString().contains("sentence") || file.toString().contains("word"))
                             || !file.toString().contains("scores")) return;
 
-                    int gender = file.toString().contains("male") ? 1 : 0;
                     String[] parts = file.toString().split("/");
-                    System.out.println(file);
-                    System.out.println(parts[parts.length - 2] + " " + parts[parts.length - 1]);
+                    int gender = parts[parts.length - 3].contains("female") ? 0 : 1;
+                    int pos = 2;
+                    if(parts[parts.length - 2].contains("segmental")) pos = 0;
+                    else if(parts[parts.length - 2].contains("intonation") || parts[parts.length - 2].contains("accent")) pos = 1;
 
                     BufferedReader br = null;
                     String sCurrentLine;
                     try {
                         br = new BufferedReader(new FileReader(file.toString()));
                         while ((sCurrentLine = br.readLine()) != null) {
-                            System.out.println(sCurrentLine);
-                            parts = sCurrentLine.split("\\.wav");
-                            parts[0] = parts[0].trim();
-                            parts[0] += ".wav";
-                            data.putIfAbsent(parts[0], new ArrayList<>());
-                            data.get(parts[0]).add(
-                                    new Septet<>(parts[parts.length - 1].trim(), 0, 0.0, 0.0, 0.0, 0.0, 0.0));
-                        }                    } catch (FileNotFoundException e) {
+                            if(sCurrentLine.charAt(0) == '#') continue;
+
+                            parts = sCurrentLine.split("\\s+");
+                            double c = 0;
+                            for(int i = parts.length - 1; i > 0; --i) c += Double.valueOf(parts[i]);
+                            c /= parts.length - 1;
+
+                            parts = parts[0].split("/");
+                            set1.add(parts[2]);
+                            data.put(parts[2], data.get(parts[2]).setAt1(gender));
+                            switch(pos){
+                                case 0: data.put(parts[2], data.get(parts[2]).setAt2(c)); break;
+                                case 1: data.put(parts[2], data.get(parts[2]).setAt3(c)); break;
+                                default: data.put(parts[2], data.get(parts[2]).setAt4(c));
+                            }
+                        }
+                    } catch (FileNotFoundException e) {
                         e.printStackTrace();
                     } catch (IOException e) {
                         e.printStackTrace();

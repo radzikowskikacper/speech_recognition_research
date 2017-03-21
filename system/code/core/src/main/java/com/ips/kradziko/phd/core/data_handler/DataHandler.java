@@ -95,12 +95,14 @@ public class DataHandler {
                 });
     }
 
-    public void transformData_Kaldi(String output_dir) throws IOException {
+    public void transformData_Kaldi(String output_dir, String test_speaker_id) throws IOException {
         Files.deleteIfExists(Paths.get(output_dir));
         new File(output_dir).mkdir();
-        new File(output_dir + "/test").mkdir();
-        new File(output_dir + "/train").mkdir();
+        new File(output_dir + "/audio/test").mkdirs();
+        new File(output_dir + "/audio/train").mkdirs();
+        new File(output_dir + "/data/test").mkdirs();
+        new File(output_dir + "/data/train").mkdirs();
 
-        
+        //data
     }
 }

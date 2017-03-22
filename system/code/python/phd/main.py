@@ -1,3 +1,6 @@
+from data_handler.handler import handler
+
+h = handler()
+
 if __name__ == '__main__':
-    a = (1, 2, 3, 4,5)
-    print(a)
+    h.load_data('/home/kradziko/projects/research/phd/data')

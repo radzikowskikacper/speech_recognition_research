@@ -26,6 +26,7 @@ class handler:
             for filename in filenames:
                 if filename == 'scores.lst':
                     print(filename)
+                    filename = os.sep.join([dirpath, filename])
                     parts = filename.split('/')
                     gender = 'female' in parts[len(parts) - 3]
                     pos = 2
@@ -34,7 +35,7 @@ class handler:
                     elif 'intonation' in parts[len(parts) - 2] or 'accent' in parts[len(parts) - 2]:
                         pos = 1
 
-                    list_of_files.append(os.sep.join([dirpath, filename]))
+                    list_of_files.append()
 
                     with open(os.sep.join([dirpath, filename])) as f:
                         for current_line in f.readlines():
@@ -48,8 +49,9 @@ class handler:
 
                             for k, v in self.fnames.iteritems():
                                 if f in v:
-                                    for k2, v2 in self.data.iteritems():
-                                        
+                                    for k2, v2 in self.data:
+                                        #if self.data[k]
+                                        pass
 
         pass
     def transformData_Kaldi(self, output_dir):

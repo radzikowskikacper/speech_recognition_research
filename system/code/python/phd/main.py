@@ -1,4 +1,5 @@
 from data_handler.handler import handler
+from collections import defaultdict
 
 h = handler()
 

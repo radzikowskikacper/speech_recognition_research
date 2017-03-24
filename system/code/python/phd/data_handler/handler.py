@@ -17,7 +17,7 @@ class handler:
 
                     if parts[len(parts) - 1] not in self.data:
                         self.data[parts[len(parts) - 1]] = list()
-                    self.fnames[parts[len(parts) - 1]].append(parts[0])
+                    self.fnames[parts[len(parts) - 1]].append(parts[0] + '.wav')
 
         pass
 
@@ -35,23 +35,35 @@ class handler:
                     elif 'intonation' in parts[len(parts) - 2] or 'accent' in parts[len(parts) - 2]:
                         pos = 1
 
-                    list_of_files.append()
-
-                    with open(os.sep.join([dirpath, filename])) as f:
+                    with open(filename) as f:
                         for current_line in f.readlines():
                             if '#' in current_line:
                                 continue
-                            parts = current_line.split('\\s+')
+                            parts = current_line.split()
                             c = sum([int(x) for x in parts[1:]])
                             c /= len(parts) - 1
                             f = parts[0].split('/')[2]
                             id = parts[0].split('/')[0] + '/' + parts[0].split('/')[1]
 
+                            found = False
                             for k, v in self.fnames.iteritems():
                                 if f in v:
-                                    for k2, v2 in self.data:
-                                        #if self.data[k]
-                                        pass
+                                    for (i, entry) in enumerate(self.data[k]):
+                                        if entry[0] == parts[0]:
+                                            print("found")
+                                            if pos == 0:
+                                                self.data[k][i] = (entry[0], entry[1], entry[2], c, entry[4], entry[5])
+                                            elif pos == 1:
+                                                self.data[k][i] = (entry[0], entry[1], entry[2], entry[3], c, entry[5])
+                                            else:
+                                                self.data[k][i] = (entry[0], entry[1], entry[2], entry[3], entry[4], c)
+                                            found = True
+                                            break
+                                    if found:
+                                        break
+
+                                    self.data[k].append(
+                                        (parts[0], id, gender, c if pos == 0 else -1.0, c if pos == 2 else -1.0, c if pos == 3 else -1.0))
 
         pass
     def transformData_Kaldi(self, output_dir):

@@ -1,5 +1,5 @@
 from collections import defaultdict
-import os
+import os, shutil
 
 class handler:
     data = dict()
@@ -19,13 +19,9 @@ class handler:
                         self.data[parts[len(parts) - 1]] = list()
                     self.fnames[parts[len(parts) - 1]].append(parts[0] + '.wav')
 
-        pass
-
-        list_of_files = []
         for (dirpath, dirnames, filenames) in os.walk(data_dir + '/lbl/'):
             for filename in filenames:
                 if filename == 'scores.lst':
-                    print(filename)
                     filename = os.sep.join([dirpath, filename])
                     parts = filename.split('/')
                     gender = 'female' in parts[len(parts) - 3]
@@ -65,6 +61,12 @@ class handler:
                                     self.data[k].append(
                                         (parts[0], id, gender, c if pos == 0 else -1.0, c if pos == 2 else -1.0, c if pos == 3 else -1.0))
 
-        pass
-    def transformData_Kaldi(self, output_dir):
-        pass
+
+    def transformData_Kaldi(self, output_dir, test_speakers):
+        shutil.rmtree(output_dir)
+        os.makedirs(output_dir + '/audio/test')
+        os.makedirs(output_dir + '/audio/train')
+        os.makedirs(output_dir + '/data/test')
+        os.makedirs(output_dir + '/data/train')
+
+        

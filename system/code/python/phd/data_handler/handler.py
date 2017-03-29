@@ -6,6 +6,7 @@ class handler:
     fnames = defaultdict(list)
 
     def load_data(self, data_dir):
+        #file name, ID, gender, score 1, score 2, score 3
         self.data = dict();
         self.fnames = defaultdict(list)
 
@@ -46,7 +47,6 @@ class handler:
                                 if f in v:
                                     for (i, entry) in enumerate(self.data[k]):
                                         if entry[0] == parts[0]:
-                                            print("found")
                                             if pos == 0:
                                                 self.data[k][i] = (entry[0], entry[1], entry[2], c, entry[4], entry[5])
                                             elif pos == 1:
@@ -61,12 +61,19 @@ class handler:
                                     self.data[k].append(
                                         (parts[0], id, gender, c if pos == 0 else -1.0, c if pos == 2 else -1.0, c if pos == 3 else -1.0))
 
-
     def transformData_Kaldi(self, output_dir, test_speakers):
-        shutil.rmtree(output_dir)
-        os.makedirs(output_dir + '/audio/test')
-        os.makedirs(output_dir + '/audio/train')
-        os.makedirs(output_dir + '/data/test')
-        os.makedirs(output_dir + '/data/train')
+        if os.path.exists(output_dir):
+            shutil.rmtree(output_dir)
+        os.makedirs('{}/audio/test'.format(output_dir))
+        os.makedirs('{}/audio/train'.format(output_dir))
+        os.makedirs('{}/data/test'.format(output_dir))
+        os.makedirs('{}/data/train'.format(output_dir))
+
+        for s in test_speakers:
+            os.makedirs("{}/audio/test/{}".format(output_dir, str(s)))
+
+        for k, v in self.data:
+            
+
 
         

@@ -11,6 +11,7 @@ class handler:
         self.data_path = data_dir
         #file name, ID, gender, score 1, score 2, score 3
         self.graded_data = dict();
+        self.data = dict()
         self.fnames = defaultdict(list)
 
         for filename in ['sentence1.tab', 'word1.tab']:
@@ -23,7 +24,20 @@ class handler:
                         self.graded_data[parts[len(parts) - 1]] = list()
                         self.data[parts[len(parts) - 1]] = list()
                     self.fnames[parts[len(parts) - 1]].append(parts[0] + '.wav')
+        '''
+        for root, dirs, files in os.walk(data_dir + '/wav/JE'):
+            path = root.split(os.sep)
+            print((len(path) - 1) * '---', os.path.basename(root))
 
+            for file in files:
+                parts = root.split('/')
+                g = True if 'F' in parts[-1] else False
+                id = '-'.join(parts[-2:])
+                for k, v in self.fnames.iteritems():
+                    if file in v:
+                        self.data[k].append(('/'.join(parts[-2:] + [file]), g, id))
+                        break
+        '''
         for (dirpath, dirnames, filenames) in os.walk(data_dir + '/lbl/'):
             for filename in filenames:
                 if filename == 'scores.lst':
@@ -78,12 +92,19 @@ class handler:
             shutil.copytree('{}/wav/JE/{}'.format(self.data_path, s.replace('-', '/')),
                             '{}/audio/test/{}'.format(output_dir, s))
 
-        for root, dirs, files in os.walk('{}/wav/JE/'.format(self.data_path)):
-            pass
+        for root, dirs, files in os.walk(self.data_dir + '/wav/JE'):
             path = root.split(os.sep)
-            print((len(path) - 1) * '---', os.path.basename(root))
+            #print((len(path) - 1) * '---', os.path.basename(root))
+
             for file in files:
-                print(len(path) * '---', file)
+                parts = root.split('/')
+                g = True if 'F' in parts[-1] else False
+                id = '-'.join(parts[-2:])
+                for k, v in self.fnames.iteritems():
+                    if file in v:
+                        self.data[k].append(('/'.join(parts[-2:] + [file]), g, id))
+                        shutil.copyfile('{}/wav/JE/{}'.format(self.data_path, ))
+                        break
 '''
         i = 0
         for k, v in self.graded_data.iteritems():

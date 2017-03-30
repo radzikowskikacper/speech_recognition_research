@@ -13,6 +13,7 @@ class handler:
         self.graded_data = dict();
         self.data = dict()
         self.fnames = defaultdict(list)
+        self.speakers = dict()
 
         for filename in ['sentence1.tab', 'word1.tab']:
             with open(data_dir + '/doc/JEcontent/tab/' + filename) as f:
@@ -88,23 +89,38 @@ class handler:
         os.makedirs('{}/data/train'.format(output_dir))
 
         for s in test_speakers:
-            #os.makedirs("{}/audio/test/{}".format(output_dir, str(s)))
-            shutil.copytree('{}/wav/JE/{}'.format(self.data_path, s.replace('-', '/')),
-                            '{}/audio/test/{}'.format(output_dir, s))
+            os.makedirs("{}/audio/test/{}".format(output_dir, str(s)))
+            #shutil.copytree('{}/wav/JE/{}'.format(self.data_path, s.replace('-', '/')),
+            #                '{}/audio/test/{}'.format(output_dir, s))
 
-        for root, dirs, files in os.walk(self.data_dir + '/wav/JE'):
+        for root, dirs, files in os.walk(self.data_path + '/wav/JE'):
             path = root.split(os.sep)
             #print((len(path) - 1) * '---', os.path.basename(root))
 
             for file in files:
                 parts = root.split('/')
-                g = True if 'F' in parts[-1] else False
+                g = 'F' in parts[-1]
                 id = '-'.join(parts[-2:])
+                self.speakers[id] = g
                 for k, v in self.fnames.iteritems():
                     if file in v:
-                        self.data[k].append(('/'.join(parts[-2:] + [file]), g, id))
-                        shutil.copyfile('{}/wav/JE/{}'.format(self.data_path, ))
+                        #self.data[k].append(('/'.join(parts[-2:] + [file]), g, id))
+                        if id not in test_speakers and not os.path.exists('{}/audio/{}/{}'.format(output_dir, 'train', id)):
+                            os.makedirs('{}/audio/train/{}'.format(output_dir, id))
+                        #shutil.copyfile('{}/wav/JE/{}'.format(self.data_path, '/'.join(parts[-2:] + [file])),
+                         #               '{}/audio/{}/{}/{}'.format(output_dir, 'test' if id in test_speakers else 'train', id, file))
                         break
+
+        fte = open('{}/data/test/spk2gender'.format(output_dir))
+        ftr = open('{}/data/train/spk2gender'.format(output_dir))
+        for k in sorted(self.speakers.iterkeys()):
+            if k in test_speakers:
+                fte.write('{} {}\n'.format(k, 'f' if self.speakers[k] else 'm'))
+            else:
+                ftr.write('{} {}\n'.format(k, 'f' if self.speakers[k] else 'm'))
+        fte.close()
+        ftr.close()
+
 '''
         i = 0
         for k, v in self.graded_data.iteritems():

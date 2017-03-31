@@ -111,8 +111,8 @@ class handler:
                          #               '{}/audio/{}/{}/{}'.format(output_dir, 'test' if id in test_speakers else 'train', id, file))
                         break
 
-        fte = open('{}/data/test/spk2gender'.format(output_dir))
-        ftr = open('{}/data/train/spk2gender'.format(output_dir))
+        fte = open('{}/data/test/spk2gender'.format(output_dir), 'w')
+        ftr = open('{}/data/train/spk2gender'.format(output_dir), 'w')
         for k in sorted(self.speakers.iterkeys()):
             if k in test_speakers:
                 fte.write('{} {}\n'.format(k, 'f' if self.speakers[k] else 'm'))

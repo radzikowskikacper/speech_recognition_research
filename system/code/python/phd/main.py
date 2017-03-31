@@ -2,10 +2,10 @@ from data_handler.handler import handler
 from collections import defaultdict
 
 h = handler()
-
+path = '/home/kradziko'
 if __name__ == '__main__':
-    h.load_data('/home/kapi/projects/research/phd/data')
+    h.load_data('{}/projects/research/phd/data'.format(path))
 
-    h.transformData_Kaldi('/home/kapi/projects/research/phd/data/kaldi', ['DOS-F01'])
+    h.transformData_Kaldi('{}/projects/research/phd/data/kaldi'.format(path), ['DOS-F01'])
 
     pass

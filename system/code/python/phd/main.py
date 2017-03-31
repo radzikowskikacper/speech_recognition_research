@@ -1,8 +1,8 @@
 from data_handler.handler import handler
-from collections import defaultdict
+import os
 
 h = handler()
-path = '/home/kradziko'
+path = os.path.expanduser('~')
 if __name__ == '__main__':
     h.load_data('{}/projects/research/phd/data'.format(path))
 

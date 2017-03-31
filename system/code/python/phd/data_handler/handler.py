@@ -6,6 +6,7 @@ class handler:
     data = dict()
     graded_data = dict()
     fnames = defaultdict(list)
+    fnames2 = dict()
 
     def load_data(self, data_dir):
         self.data_path = data_dir
@@ -25,6 +26,7 @@ class handler:
                         self.graded_data[parts[len(parts) - 1]] = list()
                         self.data[parts[len(parts) - 1]] = list()
                     self.fnames[parts[len(parts) - 1]].append(parts[0] + '.wav')
+                    self.fnames2[parts[0] + '.wav'] = parts[-1]
         '''
         for root, dirs, files in os.walk(data_dir + '/wav/JE'):
             path = root.split(os.sep)
@@ -58,27 +60,21 @@ class handler:
                             parts = current_line.split()
                             c = sum([int(x) for x in parts[1:]])
                             c /= len(parts) - 1
-                            f = parts[0].split('/')[2]
+                            ff = parts[0].split('/')[2]
                             id = '-'.join(parts[0].split('/')[0:2])#parts[0].split('/')[0] + '/' + parts[0].split('/')[1]
 
-                            found = False
-                            for k, v in self.fnames.iteritems():
-                                if f in v:
-                                    for (i, entry) in enumerate(self.graded_data[k]):
-                                        if entry[0] == parts[0]:
-                                            if pos == 0:
-                                                self.graded_data[k][i] = (entry[0], entry[1], entry[2], c, entry[4], entry[5])
-                                            elif pos == 1:
-                                                self.graded_data[k][i] = (entry[0], entry[1], entry[2], entry[3], c, entry[5])
-                                            else:
-                                                self.graded_data[k][i] = (entry[0], entry[1], entry[2], entry[3], entry[4], c)
-                                            found = True
-                                            break
-                                    if found:
-                                        break
+                            for i, entry in enumerate(self.graded_data[self.fnames2[ff]]):
+                                if entry[0] == parts[0]:
+                                    if pos == 0:
+                                        self.graded_data[self.fnames2[ff]][i] = (entry[0], entry[1], entry[2], c, entry[4], entry[5])
+                                    elif pos == 1:
+                                        self.graded_data[self.fnames2[ff]][i] = (entry[0], entry[1], entry[2], entry[3], c, entry[5])
+                                    else:
+                                        self.graded_data[self.fnames2[ff]][i] = (entry[0], entry[1], entry[2], entry[3], entry[4], c)
+                                    break
 
-                                    self.graded_data[k].append(
-                                        (parts[0], id, gender, c if pos == 0 else -1.0, c if pos == 2 else -1.0, c if pos == 3 else -1.0))
+                            self.graded_data[self.fnames2[ff]].append(
+                                (parts[0], id, gender, c if pos == 0 else -1.0, c if pos == 1 else -1.0, c if pos == 2 else -1.0))
 
     def transformData_Kaldi(self, output_dir, test_speakers):
         if os.path.exists(output_dir):
@@ -87,12 +83,15 @@ class handler:
         os.makedirs('{}/audio/train'.format(output_dir))
         os.makedirs('{}/data/test'.format(output_dir))
         os.makedirs('{}/data/train'.format(output_dir))
+        os.makedirs('{}/data/local/dict'.format(output_dir))
 
         for s in test_speakers:
             os.makedirs("{}/audio/test/{}".format(output_dir, str(s)))
             #shutil.copytree('{}/wav/JE/{}'.format(self.data_path, s.replace('-', '/')),
             #                '{}/audio/test/{}'.format(output_dir, s))
 
+        te_utt = defaultdict(list)
+        tr_utt = defaultdict(list)
         for root, dirs, files in os.walk(self.data_path + '/wav/JE'):
             path = root.split(os.sep)
             #print((len(path) - 1) * '---', os.path.basename(root))
@@ -102,14 +101,42 @@ class handler:
                 g = 'F' in parts[-1]
                 id = '-'.join(parts[-2:])
                 self.speakers[id] = g
-                for k, v in self.fnames.iteritems():
-                    if file in v:
-                        #self.data[k].append(('/'.join(parts[-2:] + [file]), g, id))
-                        if id not in test_speakers and not os.path.exists('{}/audio/{}/{}'.format(output_dir, 'train', id)):
-                            os.makedirs('{}/audio/train/{}'.format(output_dir, id))
-                        #shutil.copyfile('{}/wav/JE/{}'.format(self.data_path, '/'.join(parts[-2:] + [file])),
-                         #               '{}/audio/{}/{}/{}'.format(output_dir, 'test' if id in test_speakers else 'train', id, file))
-                        break
+
+                if id not in test_speakers:
+                    if not os.path.exists('{}/audio/{}/{}'.format(output_dir, 'train', id)):
+                        os.makedirs('{}/audio/train/{}'.format(output_dir, id))
+                    tr_utt[id + '-' + file.replace('.wav', '')].extend(['{}/audio/train/{}/{}'.format(output_dir, id, file), self.fnames2[file], id])
+                else:
+                    te_utt[id + '-' + file.replace('.wav', '')].extend(['{}/audio/test/{}/{}'.format(output_dir, id, file), self.fnames2[file], id])
+                #shutil.copyfile('{}/wav/JE/{}'.format(self.data_path, '/'.join(parts[-2:] + [file])),
+                 #               '{}/audio/{}/{}/{}'.format(output_dir, 'test' if id in test_speakers else 'train', id, file))
+
+        fte = open('{}/data/test/wav.scp'.format(output_dir), 'w')
+        ftr = open('{}/data/train/wav.scp'.format(output_dir), 'w')
+        for k in sorted(te_utt.iterkeys()):
+            fte.write('{} {}\n'.format(k, te_utt[k][0]))
+        for k in sorted(tr_utt.iterkeys()):
+            ftr.write('{} {}\n'.format(k, tr_utt[k][0]))
+        fte.close()
+        ftr.close()
+
+        fte = open('{}/data/test/text'.format(output_dir), 'w')
+        ftr = open('{}/data/train/text'.format(output_dir), 'w')
+        for k in sorted(te_utt.iterkeys()):
+            fte.write('{} {}\n'.format(k, te_utt[k][1]))
+        for k in sorted(tr_utt.iterkeys()):
+            ftr.write('{} {}\n'.format(k, tr_utt[k][1]))
+        fte.close()
+        ftr.close()
+
+        fte = open('{}/data/test/utt2spk'.format(output_dir), 'w')
+        ftr = open('{}/data/train/utt2spk'.format(output_dir), 'w')
+        for k in sorted(te_utt.iterkeys()):
+            fte.write('{} {}\n'.format(k, te_utt[k][2]))
+        for k in sorted(tr_utt.iterkeys()):
+            ftr.write('{} {}\n'.format(k, tr_utt[k][2]))
+        fte.close()
+        ftr.close()
 
         fte = open('{}/data/test/spk2gender'.format(output_dir), 'w')
         ftr = open('{}/data/train/spk2gender'.format(output_dir), 'w')
@@ -121,7 +148,10 @@ class handler:
         fte.close()
         ftr.close()
 
-        
+        ftr = open('{}/data/local/corpus.txt'.format(output_dir), 'w')
+        for k in sorted(self.fnames.iterkeys(), key = lambda a: a.lower()):
+            ftr.write('{}\n'.format(k))
+        fte.close()
 
 '''
         i = 0

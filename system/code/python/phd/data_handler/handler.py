@@ -82,6 +82,8 @@ class handler:
     def transformData_Kaldi(self, output_dir, test_speakers):
         if os.path.exists(output_dir):
             shutil.rmtree(output_dir)
+        os.makedirs('{}/local'.format(output_dir))
+        os.makedirs('{}/conf'.format(output_dir))
         os.makedirs('{}/audio/test'.format(output_dir))
         os.makedirs('{}/audio/train'.format(output_dir))
         os.makedirs('{}/data/test'.format(output_dir))
@@ -179,6 +181,16 @@ class handler:
         ftr.write('sil\nspn')
         ftr.close()
 
+        os.symlink('{}/../../../kaldi/egs/wsj/s5/utils'.format(output_dir), '{}/utils'.format(output_dir))
+        os.symlink('{}/../../../kaldi/egs/wsj/s5/steps'.format(output_dir), '{}/steps'.format(output_dir))
+        os.symlink('{}/../../../kaldi/egs/voxforge/s5/local/score.sh'.format(output_dir), '{}/local/score.sh'.format(output_dir))
+
+        ftr = open('{}/conf/decode.config'.format(output_dir), 'w')
+        ftr.write('first_beam=10.0\nbeam=13.0\nlattice_beam=6.0')
+        ftr.close()
+        ftr = open('{}/conf/mfcc.conf'.format(output_dir), 'w')
+        ftr.write('--use-energy=false')
+        ftr.close()
 '''
         i = 0
         for k, v in self.graded_data.iteritems():

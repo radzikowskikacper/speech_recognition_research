@@ -1,5 +1,5 @@
 from collections import defaultdict
-import os, shutil
+import os, shutil, re
 
 class handler:
     data_path = ''
@@ -76,6 +76,9 @@ class handler:
                             self.graded_data[self.fnames2[ff]].append(
                                 (parts[0], id, gender, c if pos == 0 else -1.0, c if pos == 1 else -1.0, c if pos == 2 else -1.0))
 
+    def get_phonemes(self, word):
+        return [word]
+
     def transformData_Kaldi(self, output_dir, test_speakers):
         if os.path.exists(output_dir):
             shutil.rmtree(output_dir)
@@ -151,7 +154,30 @@ class handler:
         ftr = open('{}/data/local/corpus.txt'.format(output_dir), 'w')
         for k in sorted(self.fnames.iterkeys(), key = lambda a: a.lower()):
             ftr.write('{}\n'.format(k))
-        fte.close()
+        ftr.close()
+
+        temp = dict()
+        ftr = open('{}/data/local/dict/lexicon.txt'.format(output_dir), 'w')
+        ftr.write('!SIL sil\n<UNK> spn\n')
+        for k in self.fnames.iterkeys():
+            k = re.sub(r'[^a-z A-Z]','', k)
+            for w in k.lower().replace('.', '').replace(',', '').split():
+                temp[w] = self.get_phonemes(w)
+        for k in sorted(temp.iterkeys()):
+            ftr.write('{} {}\n'.format(k, ' '.join(temp[k])))
+        ftr.close()
+
+        phonemes = list()
+        ftr = open('{}/data/local/dict/non_silence_phones.txt'.format(output_dir), 'w')
+        for v in temp.itervalues():
+            phonemes.extend(v)
+        for p in sorted(set(phonemes)):
+            ftr.write('{}\n'.format(p))
+        ftr.close()
+
+        ftr = open('{}/data/local/dict/silence_phones.txt'.format(output_dir), 'w')
+        ftr.write('sil\nspn')
+        ftr.close()
 
 '''
         i = 0

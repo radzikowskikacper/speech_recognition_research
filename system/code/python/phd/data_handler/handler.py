@@ -170,7 +170,7 @@ class handler:
         ftr.close()
 
         phonemes = list()
-        ftr = open('{}/data/local/dict/non_silence_phones.txt'.format(output_dir), 'w')
+        ftr = open('{}/data/local/dict/nonsilence_phones.txt'.format(output_dir), 'w')
         for v in temp.itervalues():
             phonemes.extend(v)
         for p in sorted(set(phonemes)):
@@ -178,7 +178,11 @@ class handler:
         ftr.close()
 
         ftr = open('{}/data/local/dict/silence_phones.txt'.format(output_dir), 'w')
-        ftr.write('sil\nspn')
+        ftr.write('sil\nspn\n')
+        ftr.close()
+
+        ftr = open('{}/data/local/dict/optional_silence.txt'.format(output_dir), 'w')
+        ftr.write('spn\n')
         ftr.close()
 
         os.symlink('{}/../../../kaldi/egs/wsj/s5/utils'.format(output_dir), '{}/utils'.format(output_dir))
@@ -202,8 +206,8 @@ class handler:
                     '''$KALDI_ROOT/src/gmmbin/:$KALDI_ROOT/src/featbin/:$KALDI_ROOT/src/lmbin/:$KALDI_ROOT/src/sgmm2bin/:''' \
                     '''$KALDI_ROOT/src/fgmmbin/:$KALDI_ROOT/src/latbin/:$PWD:$PATH\n\n'''
                     '''# Defining audio data directory (modify it for your installation directory!)\n''' \
-                    '''export DATA_ROOT="/home/{user}/kaldi-trunk/egs/digits/digits_audio"\n\n# Enable SRILM\n''' \
-                    '''source $KALDI_ROOT/tools/env.sh\n\n# Variable needed for proper data sorting\nexport LC_ALL=C''')
+                    '''export DATA_ROOT="{}/projects/research/phd/data/kaldi/audio"\n\n# Enable SRILM\n''' \
+                    '''source $KALDI_ROOT/tools/env.sh\n\n# Variable needed for proper data sorting\nexport LC_ALL=C'''.format(os.path.expanduser('~')))
         ftr.close()
 
         ftr = open('{}/run.sh'.format(output_dir), 'w')

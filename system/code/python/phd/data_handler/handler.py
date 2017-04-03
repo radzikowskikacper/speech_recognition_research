@@ -1,5 +1,5 @@
 from collections import defaultdict
-import os, shutil, re
+import os, shutil, re, stat
 
 class handler:
     data_path = ''
@@ -114,7 +114,9 @@ class handler:
                 else:
                     te_utt[id + '-' + file.replace('.wav', '')].extend(['{}/audio/test/{}/{}'.format(output_dir, id, file), self.fnames2[file], id])
                 #shutil.copyfile('{}/wav/JE/{}'.format(self.data_path, '/'.join(parts[-2:] + [file])),
-                 #               '{}/audio/{}/{}/{}'.format(output_dir, 'test' if id in test_speakers else 'train', id, file))
+                #                '{}/audio/{}/{}/{}'.format(output_dir, 'test' if id in test_speakers else 'train', id, file))
+                os.symlink('{}/wav/JE/{}'.format(self.data_path, '/'.join(parts[-2:] + [file])),
+                           '{}/audio/{}/{}/{}'.format(output_dir, 'test' if id in test_speakers else 'train', id, file))
 
         fte = open('{}/data/test/wav.scp'.format(output_dir), 'w')
         ftr = open('{}/data/train/wav.scp'.format(output_dir), 'w')
@@ -341,6 +343,9 @@ echo
 echo "===== run.sh script is finished ====="
 echo''')
         ftr.close()
+
+        st = os.stat('{}/run.sh'.format(output_dir))
+        os.chmod('{}/run.sh'.format(output_dir), st.st_mode | stat.S_IEXEC)
 
 '''
         i = 0

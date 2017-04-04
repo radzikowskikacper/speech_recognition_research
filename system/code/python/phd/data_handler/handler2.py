@@ -141,6 +141,19 @@ export LC_ALL=C
 '''.format(kaldi_dir))
         ftr.close()
 
+        ftr = open(os.path.join(output_dir, 'cmd.sh'), 'w')
+        ftr.write('''export train_cmd="run.pl"
+export decode_cmd="run.pl --mem 2G"
+        '''.format(kaldi_dir))
+        ftr.close()
+        st = os.stat(os.path.join(output_dir, 'cmd.sh'))
+        os.chmod(os.path.join(output_dir, 'cmd.sh'), st.st_mode | stat.S_IEXEC)
+
+        ftr = open('{}/conf/mfcc.conf'.format(output_dir), 'w')
+        ftr.write('--use-energy=false')
+        ftr.write('--sample-frequency=16000')
+        ftr.close()
+
         ftr = open(os.path.join(output_dir, 'data', 'train', 'text'), 'w')
         for k, v in self.utt_to_text.iteritems():
             ftr.write('{} {}\n'.format(k, v.upper()))

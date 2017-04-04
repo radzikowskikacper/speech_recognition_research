@@ -11,4 +11,6 @@ if __name__ == '__main__':
                                      '{}/projects/research/phd/data/kaldi2'.format(path),
                                      [])
 
-    h.prepare_training_script_Kaldi('{}/projects/research/phd/data/kaldi2/trainer.sh'.format(path))
+    h.prepare_training_script_Kaldi('{}/projects/research/kaldi'.format(path),
+                                     '{}/projects/research/phd/data/kaldi2'.format(path),
+                                    '{}/projects/research/phd/data/kaldi2/trainer.sh'.format(path))

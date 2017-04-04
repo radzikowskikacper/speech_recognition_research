@@ -95,19 +95,6 @@ class handler2:
         os.symlink(os.path.join(kaldi_dir, 'egs', 'wsj', 's5', 'steps'), os.path.join(output_dir, 'steps'))
         os.symlink(os.path.join(kaldi_dir, 'src'), os.path.join(output_dir, 'src'))
 
-
-        with open('{}/path.sh'.format(output_dir), 'w') as ftr:
-            ftr.write('''export KALDI_ROOT={}
-[ -f $KALDI_ROOT/tools/env.sh ] && . $KALDI_ROOT/tools/env.sh
-export PATH=$PWD/utils/:$KALDI_ROOT/tools/openfst/bin:$PWD:$PATH
-[ ! -f $KALDI_ROOT/tools/config/common_path.sh ] && echo >&2 "The standard file $KALDI_ROOT/tools/config/common_path.sh is not present -> Exit!" && exit 1
-. $KALDI_ROOT/tools/config/common_path.sh
-export LC_ALL=C
-'''.format(kaldi_dir))
-
-        with open('{}/conf/mfcc.conf'.format(output_dir), 'w') as ftr:
-            ftr.write('--use-energy=false\n--sample-frequency=16000\n')
-
         with open(os.path.join(output_dir, 'data', 'train', 'text'), 'w') as ftr:
             for k in sorted(self.utt_to_text.iterkeys()):
                 ftr.write('{} {}\n'.format(k, self.utt_to_text[k].upper()))
@@ -148,7 +135,19 @@ export LC_ALL=C
         self.generate_phones(os.path.join(output_dir, 'data', 'local', 'lang', 'lexicon.txt'),
                              os.path.join(output_dir, 'data', 'local', 'lang', 'nonsilence_phones.txt'))
 
-    def prepare_training_script_Kaldi(self, output_file):
+    def prepare_training_script_Kaldi(self, kaldi_dir, output_dir, output_file):
+        with open('{}/path.sh'.format(output_dir), 'w') as ftr:
+            ftr.write('''export KALDI_ROOT={}
+        [ -f $KALDI_ROOT/tools/env.sh ] && . $KALDI_ROOT/tools/env.sh
+        export PATH=$PWD/utils/:$KALDI_ROOT/tools/openfst/bin:$PWD:$PATH
+        [ ! -f $KALDI_ROOT/tools/config/common_path.sh ] && echo >&2 "The standard file $KALDI_ROOT/tools/config/common_path.sh is not present -> Exit!" && exit 1
+        . $KALDI_ROOT/tools/config/common_path.sh
+        export LC_ALL=C
+        '''.format(kaldi_dir))
+
+        with open('{}/conf/mfcc.conf'.format(output_dir), 'w') as ftr:
+            ftr.write('--use-energy=false\n--sample-frequency=16000\n')
+
         with open(output_file, 'w') as f:
             f.write("#!/bin/bash\nset -e\n")
             f.write("utils/prepare_lang.sh data/local/lang 'OOV' data/local/ data/lang\n")
@@ -157,5 +156,6 @@ export LC_ALL=C
 x=data/train
 steps/make_mfcc.sh --cmd "$train_cmd" --nj 16 $x exp/make_mfcc/$x $mfccdir
 steps/compute_cmvn_stats.sh $x exp/make_mfcc/$x $mfccdir\n''')
+            f.write('utils/subset_data_dir.sh --first data/train 10000 data/train_10k\n')
         st = os.stat(output_file)
         os.chmod(output_file, st.st_mode | stat.S_IEXEC)

@@ -1,6 +1,5 @@
 from collections import defaultdict
 import os, shutil, re, stat, wave, contextlib
-from subprocess import Popen, PIPE
 
 class handler2:
     utt_to_text = dict()
@@ -16,6 +15,7 @@ class handler2:
     def load_data(self, data_dir):
         self.data_dir = data_dir
         self.fname_to_text = dict()
+
         self.utt_to_text = dict()
         self.utt_to_file_time = defaultdict(list)
         self.file_to_path = dict()
@@ -48,38 +48,6 @@ class handler2:
     def wav_length(self, path):
         with contextlib.closing(wave.open(path, 'r')) as f:
             return f.getnframes() / float(f.getframerate())
-
-    def adjust_lexicon(self, lexicon_in, words, lexicon_out):
-        ref = dict()
-
-        with open(lexicon_in) as f:
-            for line in f:
-                line = line.strip()
-                columns = line.split("\t", 1)
-                word = columns[0]
-                pron = columns[1]
-                try:
-                    ref[word].append(pron)
-                except:
-                    ref[word] = list()
-                    ref[word].append(pron)
-
-        with open(words) as f, open(lexicon_out, "wb") as lex:
-            lex.write("OOV OOV\n")
-            for line in f:
-                line = line.strip()
-                if line in ref.keys():
-                    for pron in ref[line]:
-                        lex.write(line + " " + pron + "\n")
-
-    def generate_phones(self, lexicon_in, phones_out):
-        phones = set()
-        with open(lexicon_in) as f:
-            for line in f.readlines()[1:]:
-                phones.update(line.split()[1:])
-        with open(phones_out, 'w') as ftr:
-            for p in sorted(phones):
-                ftr.write(p + '\n')
 
     def transformData_Kaldi_easier_tut(self, kaldi_dir, output_dir, test_speakers):
         if os.path.exists(output_dir):
@@ -128,12 +96,31 @@ class handler2:
         with open(os.path.join(output_dir, 'data', 'local', 'lang', 'optional_silence.txt'), 'w') as ftr:
             ftr.write('SIL\n')
 
-        self.adjust_lexicon(os.path.join(self.data_dir, '..', 'lexicon1.txt'),
-                            os.path.join(output_dir, 'data', 'train', 'words.txt'),
-                            os.path.join(output_dir, 'data', 'local', 'lang', 'lexicon.txt'))
+        ref = defaultdict(list)
+        with open(os.path.join(self.data_dir, '..', 'lexicon1.txt')) as f:
+            for line in f:
+                line = line.strip()
+                columns = line.split("\t", 1)
+                word = columns[0]
+                pron = columns[1]
+                ref[word].append(pron)
 
-        self.generate_phones(os.path.join(output_dir, 'data', 'local', 'lang', 'lexicon.txt'),
-                             os.path.join(output_dir, 'data', 'local', 'lang', 'nonsilence_phones.txt'))
+        with open(os.path.join(output_dir, 'data', 'train', 'words.txt')) as f, \
+                open(os.path.join(output_dir, 'data', 'local', 'lang', 'lexicon.txt'), "wb") as lex:
+            lex.write("OOV OOV\n")
+            for line in f:
+                line = line.strip()
+                if line in ref.keys():
+                    for pron in ref[line]:
+                        lex.write(line + " " + pron + "\n")
+
+        phones = set()
+        with open(os.path.join(output_dir, 'data', 'local', 'lang', 'lexicon.txt')) as f:
+            for line in f.readlines()[1:]:
+                phones.update(line.split()[1:])
+        with open(os.path.join(output_dir, 'data', 'local', 'lang', 'nonsilence_phones.txt'), 'w') as ftr:
+            for p in sorted(phones):
+                ftr.write(p + '\n')
 
     def prepare_training_script_Kaldi(self, kaldi_dir, output_dir, output_file):
         with open('{}/path.sh'.format(output_dir), 'w') as ftr:
@@ -149,13 +136,17 @@ class handler2:
             ftr.write('--use-energy=false\n--sample-frequency=16000\n')
 
         with open(output_file, 'w') as f:
-            f.write("#!/bin/bash\nset -e\n")
+            f.write("#!/bin/bash\nset -e\n\n")
             f.write("utils/prepare_lang.sh data/local/lang 'OOV' data/local/ data/lang\n")
             f.write('train_cmd="run.pl"\ndecode_cmd="run.pl --mem 2G"\n')
             f.write('''mfccdir=mfcc
 x=data/train
 steps/make_mfcc.sh --cmd "$train_cmd" --nj 16 $x exp/make_mfcc/$x $mfccdir
 steps/compute_cmvn_stats.sh $x exp/make_mfcc/$x $mfccdir\n''')
-            f.write('utils/subset_data_dir.sh --first data/train 10000 data/train_10k\n')
+            f.write('#utils/subset_data_dir.sh --first data/train 10000 data/train_10k\n')
+            f.write('steps/train_mono.sh --boost-silence 1.25 --nj 10 --cmd "$train_cmd" '\
+                    'data/train_10k data/lang exp/mono_10k')
+            f.write('steps/align_si.sh --boost-silence 1.25 --nj 16 --cmd "$train_cmd"' \
+                    'data/train data/lang exp/mono_10k exp/mono_ali || exit 1;')
         st = os.stat(output_file)
         os.chmod(output_file, st.st_mode | stat.S_IEXEC)

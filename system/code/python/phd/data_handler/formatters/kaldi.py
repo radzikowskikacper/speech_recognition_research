@@ -131,12 +131,11 @@ class kaldi_formatter():
     def prepare_training_script_Kaldi(self, kaldi_dir, output_dir, output_file):
         with open('{}/path.sh'.format(output_dir), 'w') as ftr:
             ftr.write('''export KALDI_ROOT={}
-            [ -f $KALDI_ROOT/tools/env.sh ] && . $KALDI_ROOT/tools/env.sh
-            export PATH=$PWD/utils/:$KALDI_ROOT/tools/openfst/bin:$PWD:$PATH
-            [ ! -f $KALDI_ROOT/tools/config/common_path.sh ] && echo >&2 "The standard file $KALDI_ROOT/tools/config/common_path.sh is not present -> Exit!" && exit 1
-            . $KALDI_ROOT/tools/config/common_path.sh
-            export LC_ALL=C
-            '''.format(kaldi_dir))
+[ -f $KALDI_ROOT/tools/env.sh ] && . $KALDI_ROOT/tools/env.sh
+export PATH=$PWD/utils/:$KALDI_ROOT/tools/openfst/bin:$PWD:$PATH
+[ ! -f $KALDI_ROOT/tools/config/common_path.sh ] && echo >&2 "The standard file $KALDI_ROOT/tools/config/common_path.sh is not present -> Exit!" && exit 1
+. $KALDI_ROOT/tools/config/common_path.sh
+export LC_ALL=C\n'''.format(kaldi_dir))
 
         with open('{}/conf/mfcc.conf'.format(output_dir), 'w') as ftr:
             ftr.write('--use-energy=false\n--sample-frequency=16000\n')

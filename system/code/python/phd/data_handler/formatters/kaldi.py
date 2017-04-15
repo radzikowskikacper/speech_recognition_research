@@ -1,4 +1,4 @@
-import os, shutil, re, stat
+import os, shutil, stat, re
 from collections import defaultdict
 
 
@@ -11,7 +11,6 @@ class data:
     fname_to_text = dict()
 
     data_dir = ''
-
 
 class kaldi_formatter():
     def __init__(self, data):
@@ -103,6 +102,32 @@ class kaldi_formatter():
         self.__generate_phones(os.path.join(output_dir, 'data', 'local', 'lang', 'lexicon.txt'),
                              os.path.join(output_dir, 'data', 'local', 'lang', 'nonsilence_phones.txt'))
 
+        ref = defaultdict(list)
+        with open(os.path.join(self.data.data_dir, '..', 'lexicon1.txt')) as f:
+            for line in f:
+                line = line.strip()
+                columns = line.split("\t", 1)
+                word = columns[0]
+                pron = columns[1]
+                ref[word].append(pron)
+
+        with open(os.path.join(output_dir, 'data', 'train', 'words.txt')) as f, \
+                open(os.path.join(output_dir, 'data', 'local', 'lang', 'lexicon.txt'), "wb") as lex:
+            lex.write("OOV OOV\n")
+            for line in f:
+                line = line.strip()
+                if line in ref.keys():
+                    for pron in ref[line]:
+                        lex.write(line + " " + pron + "\n")
+
+        phones = set()
+        with open(os.path.join(output_dir, 'data', 'local', 'lang', 'lexicon.txt')) as f:
+            for line in f.readlines()[1:]:
+                phones.update(line.split()[1:])
+        with open(os.path.join(output_dir, 'data', 'local', 'lang', 'nonsilence_phones.txt'), 'w') as ftr:
+            for p in sorted(phones):
+                ftr.write(p + '\n')
+
     def prepare_training_script_Kaldi(self, kaldi_dir, output_dir, output_file):
         with open('{}/path.sh'.format(output_dir), 'w') as ftr:
             ftr.write('''export KALDI_ROOT={}
@@ -117,13 +142,18 @@ class kaldi_formatter():
             ftr.write('--use-energy=false\n--sample-frequency=16000\n')
 
         with open(output_file, 'w') as f:
-            f.write("#!/bin/bash\nset -e\n")
+            f.write("#!/bin/bash\nset -e\n\n")
             f.write("utils/prepare_lang.sh data/local/lang 'OOV' data/local/ data/lang\n")
             f.write('train_cmd="run.pl"\ndecode_cmd="run.pl --mem 2G"\n')
             f.write('''mfccdir=mfcc
-    x=data/train
-    steps/make_mfcc.sh --cmd "$train_cmd" --nj 16 $x exp/make_mfcc/$x $mfccdir
-    steps/compute_cmvn_stats.sh $x exp/make_mfcc/$x $mfccdir\n''')
+x=data/train
+steps/make_mfcc.sh --cmd "$train_cmd" --nj 16 $x exp/make_mfcc/$x $mfccdir
+steps/compute_cmvn_stats.sh $x exp/make_mfcc/$x $mfccdir\n''')
             f.write('utils/subset_data_dir.sh --first data/train 10000 data/train_10k\n')
+            f.write('steps/train_mono.sh --boost-silence 1.25 --nj 10 --cmd "$train_cmd"\n'\
+                    'data/train_10k data/lang exp/mono_10k')
+            f.write('steps/align_si.sh --boost-silence 1.25 --nj 16 --cmd "$train_cmd"\n'\
+                    'data/train data/lang exp/mono_10k exp/mono_ali || exit 1;')
+
         st = os.stat(output_file)
         os.chmod(output_file, st.st_mode | stat.S_IEXEC)

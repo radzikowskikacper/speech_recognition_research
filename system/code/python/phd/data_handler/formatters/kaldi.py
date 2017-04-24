@@ -31,7 +31,7 @@ class kaldi_formatter():
                     ref[word] = list()
                     ref[word].append(pron)
 
-        with open(words) as f, open(lexicon_out, "wb") as lex:
+        with open(words) as f, open(lexicon_out, "w") as lex:
             lex.write("OOV OOV\n")
             for line in f:
                 line = line.strip()
@@ -63,30 +63,30 @@ class kaldi_formatter():
         os.symlink(os.path.join(kaldi_dir, 'src'), os.path.join(output_dir, 'src'))
 
         with open(os.path.join(output_dir, 'data', 'train', 'text'), 'w') as ftr:
-            for k in sorted(self.data.utt_to_text.iterkeys()):
+            for k in sorted(self.data.utt_to_text.keys()):
                 ftr.write('{} {}\n'.format(k, self.data.utt_to_text[k].upper()))
 
         words = set()
-        for v in self.data.utt_to_text.itervalues():
+        for v in self.data.utt_to_text.values():
             words.update([re.sub(r'[^a-z A-Z\']', '', k).upper() for k in v.split()])
         with open(os.path.join(output_dir, 'data', 'train', 'words.txt'), 'w') as ftr:
             for k in sorted(words):
                 ftr.write('{}\n'.format(k))
 
         with open(os.path.join(output_dir, 'data', 'train', 'segments'), 'w') as ftr:
-            for k in sorted(self.data.utt_to_file_time.iterkeys()):
+            for k in sorted(self.data.utt_to_file_time.keys()):
                 ftr.write('{} {} {} {}\n'.format(k, *(self.data.utt_to_file_time[k])))
 
         with open(os.path.join(output_dir, 'data', 'train', 'wav.scp'), 'w') as ftr:
-            for k in sorted(self.data.file_to_path.iterkeys()):
+            for k in sorted(self.data.file_to_path.keys()):
                 ftr.write('{} {}\n'.format(k, self.data.file_to_path[k]))
 
         with open(os.path.join(output_dir, 'data', 'train', 'utt2spk'), 'w') as ftr:
-            for k in sorted(self.data.utt_to_spk.iterkeys()):
+            for k in sorted(self.data.utt_to_spk.keys()):
                 ftr.write('{} {}\n'.format(k, self.data.utt_to_spk[k]))
 
         with open(os.path.join(output_dir, 'data', 'train', 'spk2utt'), 'w') as ftr:
-            for k in sorted(self.data.spk_to_utt.iterkeys()):
+            for k in sorted(self.data.spk_to_utt.keys()):
                 ftr.write('{} {}\n'.format(k, ' '.join(sorted(self.data.spk_to_utt[k]))))
 
         with open(os.path.join(output_dir, 'data', 'local', 'lang', 'silence_phones.txt'), 'w') as ftr:
@@ -112,7 +112,7 @@ class kaldi_formatter():
                 ref[word].append(pron)
 
         with open(os.path.join(output_dir, 'data', 'train', 'words.txt')) as f, \
-                open(os.path.join(output_dir, 'data', 'local', 'lang', 'lexicon.txt'), "wb") as lex:
+                open(os.path.join(output_dir, 'data', 'local', 'lang', 'lexicon.txt'), "w") as lex:
             lex.write("OOV OOV\n")
             for line in f:
                 line = line.strip()

@@ -1,5 +1,5 @@
-from loaders.erj import erj_loader
-from formatters.kaldi import *
+from .loaders.erj import erj_loader
+from .formatters.kaldi import *
 
 
 class handler:

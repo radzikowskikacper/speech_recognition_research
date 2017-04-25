@@ -35,6 +35,6 @@ def sim():
     plt.figure()
     x = [l[0] for l in drA]
     y = [l[1] for l in drA]
-    cls = [int(drA.predict([x1, y1])[0]) for x1, y1 in zip(x, y)]
+    cls = [int(lda.predict([x1, y1])[0]) for x1, y1 in zip(x, y)]
     plt.scatter(x, y, c=[[1, 0, 0]])
     plt.savefig('a.png')

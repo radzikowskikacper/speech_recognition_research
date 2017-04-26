@@ -6,8 +6,12 @@ h = handler()
 path = os.path.expanduser('~')
 
 if __name__ == '__main__':
+    from feature_selection import speaker_dependency
+    speaker_dependency.get_speaker_dependent_features()
+    '''
     from testing import examples
     examples.sim()
+    '''
     '''
     h.loader.load_data('{}/projects/research/phd/data/ume-erj'.format(path))
 

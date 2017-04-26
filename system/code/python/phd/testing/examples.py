@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from sklearn import model_selection
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from matplotlib import colors
-from sklearn.feature_selection import SelectFromModel
+from sklearn.feature_selection import SelectFromModel, VarianceThreshold
 from sklearn.pipeline import Pipeline
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.svm import LinearSVC
@@ -13,7 +13,7 @@ def generate_data_set(n, d=1):
     random.seed()
     s = list()
     for i in range(n):
-        s.append([random.randint(1, 10) for _ in range(d)])
+        s.append([random.randint(1, 100) for _ in range(d)])
     return s
 
 def save_data(fname):
@@ -34,26 +34,27 @@ def sim():
         for j in range(len(A)):
             A[j][i] = random.randint(0, 100)
 
-    #sel = VarianceThreshold(threshold=())
-    #ff = sel.fit_transform(A)
+    sel = VarianceThreshold(threshold=(.8 * (1 - .8)))
+    sff = sel.fit_transform(A)
 
     clf = ExtraTreesClassifier()
     clf = clf.fit(A, y)
     hh = clf.feature_importances_
+    #jj = clf.predict([[1, 2, 3, 25, 50]])
 
     model = SelectFromModel(clf, prefit=True)
     X_new = model.transform(A)
     hh2 = X_new.shape
 
-    plot(A, y)
+    #plot(A, y)
 
     lda = LinearDiscriminantAnalysis(n_components=2)
-    lda.fit(A, y)
+    hh3 = lda.fit(A, y)
     drA = lda.transform(A)
 
     Z = generate_data_set(1, 5)
-    #Z = lda.transform(Z)
-    z_lab = lda.predict([[0, 0, 0, 2, 0]])
+    Z = lda.transform(Z)
+    z_lab = lda.predict(Z)
     z_prob = lda.predict_proba(Z)
 
     plt.figure()

@@ -140,39 +140,39 @@ export LC_ALL=C\n'''.format(kaldi_dir))
         with open('{}/conf/mfcc.conf'.format(output_dir), 'w') as ftr:
             ftr.write('--use-energy=false\n--sample-frequency=16000\n')
 
-            with open(output_file, 'w') as f:
-                f.write("#!/bin/bash\nset -e\n\n")
-                f.write('begin=$(date +%s)\n')
-                f.write("utils/prepare_lang.sh data/local/lang 'OOV' data/local/ data/lang\n")
-                f.write('train_cmd="run.pl"\ndecode_cmd="run.pl --mem 2G"\n')
-                f.write('''mfccdir=mfcc
-        x=data/train
-        steps/make_mfcc.sh --cmd "$train_cmd" --nj 16 $x exp/make_mfcc/$x $mfccdir
-        steps/compute_cmvn_stats.sh $x exp/make_mfcc/$x $mfccdir\n''')
-                f.write('utils/subset_data_dir.sh --first data/train 10000 data/train_10k\n')
-                f.write('steps/train_mono.sh --boost-silence 1.25 --nj 10 --cmd "$train_cmd" ' \
-                        'data/train_10k data/lang exp/mono_10k\n')
-                f.write('steps/align_si.sh --boost-silence 1.25 --nj 16 --cmd "$train_cmd" ' \
-                        'data/train data/lang exp/mono_10k exp/mono_ali || exit 1;\n')
-                f.write('steps/train_deltas.sh --boost-silence 1.25 --cmd "$train_cmd" ' \
-                        '2000 10000 data/train data/lang exp/mono_ali exp/tri1 || exit 1;\n')
-                f.write('steps/align_si.sh --nj 24 --cmd "$train_cmd" '
-                        'data/train data/lang exp/tri1 exp/tri1_ali || exit 1;\n')
-                f.write('steps/train_deltas.sh --cmd "$train_cmd" ' \
-                        '2500 15000 data/train data/lang exp/tri1_ali exp/tri2a || exit 1;\n')
-                f.write('steps/align_si.sh --nj 24 --cmd "$train_cmd" ' \
-                        '--use-graphs true data/train data/lang exp/tri2a exp/tri2a_ali || exit 1;\n')
-                f.write('steps/train_lda_mllt.sh --cmd "$train_cmd" ' \
-                        '3500 20000 data/train data/lang exp/tri2a_ali exp/tri3a || exit 1;\n')
-                f.write('steps/align_fmllr.sh --nj 32 --cmd "$train_cmd" ' \
-                        'data/train data/lang exp/tri3a exp/tri3a_ali || exit 1;\n')
-                f.write('steps/train_sat.sh --cmd "$train_cmd" ' \
-                        '4200 40000 data/train data/lang exp/tri3a_ali exp/tri4a || exit 1;\n')
-                f.write('steps/align_fmllr.sh --cmd "$train_cmd" ' \
-                        'data/train data/lang exp/tri4a exp/tri4a_ali || exit 1;\n')
-                f.write('end=$(date +%s)\n')
-                f.write('tottime=$(expr $end - $begin)\n')
-                f.write('echo Script execution time: $tottime s')
+        with open(output_file, 'w') as f:
+            f.write("#!/bin/bash\nset -e\n\n")
+            f.write('begin=$(date +%s)\n')
+            f.write("utils/prepare_lang.sh data/local/lang 'OOV' data/local/ data/lang\n")
+            f.write('train_cmd="run.pl"\ndecode_cmd="run.pl --mem 2G"\n')
+            f.write('''mfccdir=mfcc
+x=data/train
+steps/make_mfcc.sh --cmd "$train_cmd" --nj 16 $x exp/make_mfcc/$x $mfccdir
+steps/compute_cmvn_stats.sh $x exp/make_mfcc/$x $mfccdir\n''')
+            f.write('utils/subset_data_dir.sh --first data/train 10000 data/train_10k\n')
+            f.write('steps/train_mono.sh --boost-silence 1.25 --nj 10 --cmd "$train_cmd" ' \
+                    'data/train_10k data/lang exp/mono_10k\n')
+            f.write('steps/align_si.sh --boost-silence 1.25 --nj 16 --cmd "$train_cmd" ' \
+                    'data/train data/lang exp/mono_10k exp/mono_ali || exit 1;\n')
+            f.write('steps/train_deltas.sh --boost-silence 1.25 --cmd "$train_cmd" ' \
+                    '2000 10000 data/train data/lang exp/mono_ali exp/tri1 || exit 1;\n')
+            f.write('steps/align_si.sh --nj 24 --cmd "$train_cmd" '
+                    'data/train data/lang exp/tri1 exp/tri1_ali || exit 1;\n')
+            f.write('steps/train_deltas.sh --cmd "$train_cmd" ' \
+                    '2500 15000 data/train data/lang exp/tri1_ali exp/tri2a || exit 1;\n')
+            f.write('steps/align_si.sh --nj 24 --cmd "$train_cmd" ' \
+                    '--use-graphs true data/train data/lang exp/tri2a exp/tri2a_ali || exit 1;\n')
+            f.write('steps/train_lda_mllt.sh --cmd "$train_cmd" ' \
+                    '3500 20000 data/train data/lang exp/tri2a_ali exp/tri3a || exit 1;\n')
+            f.write('steps/align_fmllr.sh --nj 32 --cmd "$train_cmd" ' \
+                    'data/train data/lang exp/tri3a exp/tri3a_ali || exit 1;\n')
+            f.write('steps/train_sat.sh --cmd "$train_cmd" ' \
+                    '4200 40000 data/train data/lang exp/tri3a_ali exp/tri4a || exit 1;\n')
+            f.write('steps/align_fmllr.sh --cmd "$train_cmd" ' \
+                    'data/train data/lang exp/tri4a exp/tri4a_ali || exit 1;\n')
+            f.write('end=$(date +%s)\n')
+            f.write('tottime=$(expr $end - $begin)\n')
+            f.write('echo Script execution time: $tottime s')
 
         st = os.stat(output_file)
         os.chmod(output_file, st.st_mode | stat.S_IEXEC)

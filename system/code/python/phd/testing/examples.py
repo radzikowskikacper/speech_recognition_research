@@ -6,7 +6,7 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from matplotlib import colors
 from sklearn.feature_selection import SelectFromModel, VarianceThreshold
 from sklearn.pipeline import Pipeline
-from sklearn.ensemble import ExtraTreesClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import LinearSVC
 
 def generate_data_set(n, d=1):
@@ -37,7 +37,7 @@ def sim():
     sel = VarianceThreshold(threshold=(.8 * (1 - .8)))
     sff = sel.fit_transform(A)
 
-    clf = ExtraTreesClassifier()
+    clf = RandomForestClassifier()
     clf = clf.fit(A, y)
     hh = clf.feature_importances_
     #jj = clf.predict([[1, 2, 3, 25, 50]])

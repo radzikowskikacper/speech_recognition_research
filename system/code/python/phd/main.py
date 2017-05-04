@@ -9,7 +9,7 @@ if __name__ == '__main__':
     '''
     from feature_selection import speaker_dependency
     speaker_dependency.get_speaker_dependent_features()
-    
+    '''
     from testing import examples
     examples.sim()
     
@@ -23,4 +23,4 @@ if __name__ == '__main__':
     h.formatter.prepare_training_script_Kaldi('{}/projects/research/kaldi'.format(path),
                                      '{}/projects/research/phd/data/kaldi'.format(path),
                                     '{}/projects/research/phd/data/kaldi/trainer.sh'.format(path))
-
+    '''

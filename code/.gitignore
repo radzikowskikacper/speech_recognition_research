@@ -7,3 +7,5 @@
 .idea/modules.xml
 
 *.png
+
+__pycache__

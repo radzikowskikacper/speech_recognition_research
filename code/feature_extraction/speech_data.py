@@ -161,10 +161,13 @@ def mfcc_batch_generator(batch_size=10, source=Source.DIGIT_WAVES, target=Target
   batch_features = []
   labels = []
   files = os.listdir(path)
+  i = 0
   while True:
     print("loaded batch of %d files" % len(files))
     shuffle(files)
     for wav in files:
+      print(wav)
+      i += 1
       if not wav.endswith(".wav"): continue
       wave, sr = librosa.load(path+wav, mono=True)
       if target==Target.speaker: label=one_hot_from_item(speaker(wav), speakers)

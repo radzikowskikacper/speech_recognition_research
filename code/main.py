@@ -1,8 +1,8 @@
-from data_handler.handler import handler
+#from data_handler.handler import handler
 import os
 from testing import demo
 
-h = handler()
+#h = handler()
 path = os.path.expanduser('~')
 
 if __name__ == '__main__':
@@ -15,7 +15,11 @@ if __name__ == '__main__':
     #examples.sim()
 
     demo.do_demo()
-    
+    #from feature_extraction import extraction
+    #a = extraction.get_features_vector("/media/kapi/0999786741FF823E/research_data/umeerj/ume-erj/wav/JE/DOS/F01/S6_001.wav")
+
+    from training import rajs_net
+    #rajs_net.train('../data/umeerj/ume-erj/')
     '''
     h.loader.load_data('{}/projects/research/phd/data/ume-erj'.format(path))
 

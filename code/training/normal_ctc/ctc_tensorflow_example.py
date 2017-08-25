@@ -152,7 +152,7 @@ with tf.Session(graph=graph) as session:
     # Initializate the weights and biases
     tf.global_variables_initializer().run()
 
-    for curr_epoch in range(20):
+    for curr_epoch in range(num_epochs):
         train_cost = train_ler = 0
         start = time.time()
 

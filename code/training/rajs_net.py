@@ -1,5 +1,6 @@
 import os, tflearn, tensorflow as tf, numpy as np
 from feature_extraction import extraction
+from random import shuffle
 
 def create_model(data_shape, learning_rate, classes):
     net = tflearn.input_data(data_shape)
@@ -21,18 +22,21 @@ def batch_generator(data, batch_size):
 
     mx = max([len(d[1][0]) for d in data])
     while True:
+        shuffle(data)
         for i in range(len(data)):
             dt = np.pad(data[i][1], ((0, 0), (0, mx - len(data[i][1][0]))), mode='constant', constant_values=0)
             samples.append(np.array(dt))
             lbl = [np.eye(len(alphabet))[alphabet.index(c)] for c in data[i][2].lower()]
-            lbl = np.pad(lbl, )
+            lbl = np.eye(len(alphabet))[alphabet.index(data[i][2].lower()[0])]
             labels.append(np.array(lbl))
             if len(samples) >= batch_size:
                 yield samples, labels, alphabet, mx
+                samples = []
+                labels = []
 
 def train(path):
     learning_rate = 0.0001
-    training_iters = 300000  # steps
+    training_iters = 10  # steps
     batch_size = 32
 
     data_dir = os.path.join(path, 'wav', 'JE')
@@ -62,22 +66,25 @@ def train(path):
     classes = 10  # digits
     print("Generating batches")
 
-    batches = batch_generator(data, batch_size)
-    X, Y, alphabet, height = next(batches)
-    trainX, trainY = X, Y
-    testX, testY = X, Y  # overfit for now
-
     ### add this "fix" for tensorflow version errors
     col = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
     for x in col:
         tf.add_to_collection(tf.GraphKeys.VARIABLES, x)
 
+    batches = batch_generator(data, batch_size)
+    X, Y, alphabet, height = next(batches)
+    trainX, trainY = X, Y
+    testX, testY = X, Y  # overfit for now
     model = create_model([None, width, height], learning_rate, len(alphabet))
 
     for _ in range(training_iters):
         model.fit(trainX, trainY, n_epoch=10, validation_set=(testX, testY), show_metric=True,
                   batch_size=batch_size)
         #_y = model.predict(X)
-    model.save("tflearn.lstm.model")
+        batches = batch_generator(data, batch_size)
+        X, Y, alphabet, height = next(batches)
+        trainX, trainY = X, Y
+        testX, testY = X, Y  # overfit for now
+
     #print(_y)
     #print(y)

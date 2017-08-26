@@ -232,10 +232,11 @@ def demo():
         source_sequence_length = loaded_graph.get_tensor_by_name('source_sequence_length:0')
         target_sequence_length = loaded_graph.get_tensor_by_name('target_sequence_length:0')
 
-        # Multiply by batch_size to match the model's input parameters
-        answer_logits = sess.run(logits, {input_data: [data[0][1]] * batch_size,
-                                          target_sequence_length: [3] * batch_size,
-                                          source_sequence_length: [66] * batch_size})[0]
+        for i in [0, 1]:
+            # Multiply by batch_size to match the model's input parameters
+            answer_logits = sess.run(logits, {input_data: [data[i][1]] * batch_size,
+                                              target_sequence_length: [3] * batch_size,
+                                              source_sequence_length: [66] * batch_size})[0]
 
-    print('  Word Ids:       {}'.format([i for i in answer_logits if i != char_to_int["<PAD>"]]))
-    print('  Response Words: {}'.format(" ".join([int_to_char[i] for i in answer_logits if i != char_to_int["<PAD>"]])))
+            print('  Word Ids:       {}'.format([i for i in answer_logits if i != char_to_int["<PAD>"]]))
+            print('  Response Words: {}'.format(" ".join([int_to_char[i] for i in answer_logits if i != char_to_int["<PAD>"]])))

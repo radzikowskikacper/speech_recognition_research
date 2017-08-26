@@ -21,7 +21,10 @@ if __name__ == '__main__':
     #from training import rajs_net
     #rajs_net.train('../data/umeerj/ume-erj/')
 
-    from training.normal_ctc import ctc_tensorflow_example
+    from training.normal_s2s_encdec import s2s_encdec
+    #s2s_encdec.demo()
+    from training.normal_s2s_encdec import original
+    #from training.normal_ctc import ctc_tensorflow_example
 
 
     '''

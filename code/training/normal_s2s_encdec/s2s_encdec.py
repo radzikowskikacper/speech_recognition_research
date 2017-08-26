@@ -1,8 +1,20 @@
 import tensorflow as tf
 from tensorflow.python.layers.core import Dense
+from data_handler.loaders import tf_loader
 
-def get_model_inputs():
-    input_data = tf.placeholder(tf.int32, [None, None], name='input')
+batch_size = 128
+# Number of Epochs
+epochs = 60
+# RNN Size
+rnn_size = 50
+# Number of Layers
+num_layers = 2
+# Learning Rate
+learning_rate = 0.001
+embedding_size = 15
+
+def get_model_inputs(number_of_features):
+    input_data = tf.placeholder(tf.float32, [None, None, number_of_features], name='input')
     targets = tf.placeholder(tf.int32, [None, None], name='targets')
     lr = tf.placeholder(tf.float32, name='learning_rate')
 
@@ -12,11 +24,9 @@ def get_model_inputs():
 
     return input_data, targets, lr, target_sequence_length, max_target_sequence_length, source_sequence_length
 
-def create_encoder(input_data, rnn_size, num_layers,
-                   source_sequence_length, source_vocab_size,
-                   encoding_embedding_size):
+def create_encoder(input_data, rnn_size, num_layers, source_sequence_length):
     # Encoder embedding
-    enc_embed_input = tf.contrib.layers.embed_sequence(input_data, source_vocab_size, encoding_embedding_size)
+    #enc_embed_input = tf.contrib.layers.embed_sequence(input_data,40, embedding_size)
 
     # RNN cell
     def make_cell(rnn_size):
@@ -26,33 +36,38 @@ def create_encoder(input_data, rnn_size, num_layers,
 
     enc_cell = tf.contrib.rnn.MultiRNNCell([make_cell(rnn_size) for _ in range(num_layers)])
 
-    enc_output, enc_state = tf.nn.dynamic_rnn(enc_cell, enc_embed_input, sequence_length=source_sequence_length,
+    enc_output, enc_state = tf.nn.dynamic_rnn(enc_cell, input_data, sequence_length=source_sequence_length,
                                               dtype=tf.float32)
 
     return enc_output, enc_state
 
-def create_decoder(target_letter_to_int, decoding_embedding_size, num_layers, rnn_size,
-                   target_sequence_length, max_target_sequence_length, enc_state, dec_input):
+# Process the input we'll feed to the decoder
+def process_decoder_input(target_data, vocab_to_int, batch_size):
+    '''Remove the last word id from each batch and concat the <GO> to the begining of each batch'''
+    ending = tf.strided_slice(target_data, [0, 0], [batch_size, -1], [1, 1])
+    dec_input = tf.concat([tf.fill([batch_size, 1], vocab_to_int['<GO>']), ending], 1)
+
+    return dec_input
+
+def create_decoder(char_to_int, embedding_size, num_layers, rnn_size, target_sequence_length, max_target_sequence_length,
+                   input_data_encoder_state, input_data_target):
     # 1. Decoder Embedding
-    target_vocab_size = len(target_letter_to_int)
-    dec_embeddings = tf.Variable(tf.random_uniform([target_vocab_size, decoding_embedding_size]))
-    dec_embed_input = tf.nn.embedding_lookup(dec_embeddings, dec_input)
+    target_vocab_size = len(char_to_int)
+    embeddings = tf.Variable(tf.random_uniform([target_vocab_size, embedding_size]))
+    dec_embed_input = tf.nn.embedding_lookup(embeddings, input_data_target)
 
     # 2. Construct the decoder cell
     def make_cell(rnn_size):
-        dec_cell = tf.contrib.rnn.LSTMCell(rnn_size,
-                                           initializer=tf.random_uniform_initializer(-0.1, 0.1, seed=2))
+        dec_cell = tf.contrib.rnn.LSTMCell(rnn_size, initializer=tf.random_uniform_initializer(-0.1, 0.1, seed=2))
         return dec_cell
 
     dec_cell = tf.contrib.rnn.MultiRNNCell([make_cell(rnn_size) for _ in range(num_layers)])
 
     # 3. Dense layer to translate the decoder's output at each time
     # step into a choice from the target vocabulary
-    output_layer = Dense(target_vocab_size,
-                         kernel_initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.1))
+    output_layer = Dense(target_vocab_size, kernel_initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.1))
 
-    # 4. Set up a training decoder and an inference decoder
-    # Training Decoder
+    # 4. Training Decoder
     with tf.variable_scope("decode"):
         # Helper for the training process. Used by BasicDecoder to read inputs.
         training_helper = tf.contrib.seq2seq.TrainingHelper(inputs=dec_embed_input,
@@ -62,7 +77,7 @@ def create_decoder(target_letter_to_int, decoding_embedding_size, num_layers, rn
         # Basic decoder
         training_decoder = tf.contrib.seq2seq.BasicDecoder(dec_cell,
                                                            training_helper,
-                                                           enc_state,
+                                                           input_data_encoder_state,
                                                            output_layer)
 
         # Perform dynamic decoding using the decoder
@@ -72,18 +87,18 @@ def create_decoder(target_letter_to_int, decoding_embedding_size, num_layers, rn
     # 5. Inference Decoder
     # Reuses the same parameters trained by the training process
     with tf.variable_scope("decode", reuse=True):
-        start_tokens = tf.tile(tf.constant([target_letter_to_int['<GO>']], dtype=tf.int32), [batch_size],
+        start_tokens = tf.tile(tf.constant([char_to_int['<GO>']], dtype=tf.int32), [batch_size],
                                name='start_tokens')
 
         # Helper for the inference process.
-        inference_helper = tf.contrib.seq2seq.GreedyEmbeddingHelper(dec_embeddings,
+        inference_helper = tf.contrib.seq2seq.GreedyEmbeddingHelper(embeddings,
                                                                     start_tokens,
-                                                                    target_letter_to_int['<EOS>'])
+                                                                    char_to_int['<EOS>'])
 
         # Basic decoder
         inference_decoder = tf.contrib.seq2seq.BasicDecoder(dec_cell,
                                                             inference_helper,
-                                                            enc_state,
+                                                            input_data_encoder_state,
                                                             output_layer)
 
         # Perform dynamic decoding using the decoder
@@ -93,22 +108,16 @@ def create_decoder(target_letter_to_int, decoding_embedding_size, num_layers, rn
 
     return training_decoder_output, inference_decoder_output
 
-def create_model(input_data, targets, lr, target_sequence_length, max_target_sequence_length, source_sequence_length,
-                  source_vocab_size, target_vocab_size, enc_embedding_size, dec_embedding_size, rnn_size, num_layers):
+def create_model(input_data, targets, lr, target_sequence_length, max_target_sequence_length, rnn_size, num_layers, char_to_int, source_sequence_length):
     # Pass the input data through the encoder. We'll ignore the encoder output, but use the state
-    _, enc_state = create_encoder(input_data,
-                                  rnn_size,
-                                  num_layers,
-                                  source_sequence_length,
-                                  source_vocab_size,
-                                  encoding_embedding_size)
+    _, enc_state = create_encoder(input_data, rnn_size, num_layers, source_sequence_length)
 
     # Prepare the target sequences we'll feed to the decoder in training mode
-    dec_input = process_decoder_input(targets, target_letter_to_int, batch_size)
+    dec_input = process_decoder_input(targets, char_to_int, batch_size)
 
     # Pass encoder state and decoder inputs to the decoders
-    training_decoder_output, inference_decoder_output = create_decoder(target_letter_to_int,
-                                                                       decoding_embedding_size,
+    training_decoder_output, inference_decoder_output = create_decoder(char_to_int,
+                                                                       embedding_size,
                                                                        num_layers,
                                                                        rnn_size,
                                                                        target_sequence_length,
@@ -118,13 +127,20 @@ def create_model(input_data, targets, lr, target_sequence_length, max_target_seq
 
     return training_decoder_output, inference_decoder_output
 
-def train():
+def demo():
+    data = tf_loader.load_data('../data/umeerj/ume-erj/')
+    alphabet = tf_loader.get_alphabet(data)
+    tokens = ['<PAD>', '<UNK>', '<GO>', '<EOS>']
+    int_to_char = {i : char for i, char in enumerate(tokens + alphabet)}
+    char_to_int = {char : i for i, char in int_to_char.items()}
+    data = [(d[0], d[1], [char_to_int[char] for char in d[2]]) for d in data]
+
     # Build the graph
     train_graph = tf.Graph()
     # Set the graph to default to ensure that it is ready for training
     with train_graph.as_default():
         # Load the model inputs
-        input_data, targets, lr, target_sequence_length, max_target_sequence_length, source_sequence_length = get_model_inputs()
+        input_data, targets, lr, target_sequence_length, max_target_sequence_length, source_sequence_length = get_model_inputs(data[0][1].shape[1])
 
         # Create the training and inference logits
         training_decoder_output, inference_decoder_output = create_model(input_data,
@@ -132,13 +148,8 @@ def train():
                                                                           lr,
                                                                           target_sequence_length,
                                                                           max_target_sequence_length,
-                                                                          source_sequence_length,
-                                                                          len(source_letter_to_int),
-                                                                          len(target_letter_to_int),
-                                                                          encoding_embedding_size,
-                                                                          decoding_embedding_size,
                                                                           rnn_size,
-                                                                          num_layers)
+                                                                          num_layers, char_to_int, source_sequence_length)
 
         # Create tensors for the training logits and inference logits
         training_logits = tf.identity(training_decoder_output[0].rnn_output, 'logits')
@@ -161,3 +172,70 @@ def train():
             gradients = optimizer.compute_gradients(cost)
             capped_gradients = [(tf.clip_by_value(grad, -5., 5.), var) for grad, var in gradients if grad is not None]
             train_op = optimizer.apply_gradients(capped_gradients)
+
+    display_step = 20  # Check training loss after every 20 batches
+
+    checkpoint = "best_model.ckpt"
+    with tf.Session(graph=train_graph) as sess:
+        sess.run(tf.global_variables_initializer())
+        epochs = 1
+        for epoch_i in range(1, epochs + 1):
+            jj = 0
+            for batch_i, (sources_batch, targets_batch, sources_lengths, targets_lengths) in enumerate(
+                    tf_loader.batch_generator(data, batch_size, char_to_int)):
+
+                # Training step
+                _, loss = sess.run(
+                    [train_op, cost],
+                    {input_data: sources_batch,
+                     targets: targets_batch,
+                     lr: learning_rate,
+                     target_sequence_length: targets_lengths,
+                 source_sequence_length: sources_lengths})
+
+                # Debug message updating us on the status of the training
+                if batch_i % display_step == 0 and batch_i > 0:
+                    jj += 1
+                    # Calculate validation cost
+                    validation_loss = sess.run(
+                        [cost],
+                        {input_data: sources_batch,
+                         targets: targets_batch,
+                         lr: learning_rate,
+                         target_sequence_length: targets_lengths,
+                         source_sequence_length: sources_lengths})
+
+                    print('Epoch {:>3}/{} Batch {:>4}/{} - Loss: {:>6.3f}  - Validation loss: {:>6.3f}'
+                          .format(epoch_i,
+                                  epochs,
+                                  batch_i,
+                                  len(sources_batch) // batch_size,
+                                  loss,
+                                  validation_loss[0]))
+                if jj == 20:
+                    break
+        # Save Model
+        saver = tf.train.Saver()
+        saver.save(sess, checkpoint)
+        print('Model Trained and Saved')
+
+    checkpoint = "./best_model.ckpt"
+
+    loaded_graph = tf.Graph()
+    with tf.Session(graph=loaded_graph) as sess:
+        # Load saved model
+        loader = tf.train.import_meta_graph(checkpoint + '.meta')
+        loader.restore(sess, checkpoint)
+
+        input_data = loaded_graph.get_tensor_by_name('input:0')
+        logits = loaded_graph.get_tensor_by_name('predictions:0')
+        source_sequence_length = loaded_graph.get_tensor_by_name('source_sequence_length:0')
+        target_sequence_length = loaded_graph.get_tensor_by_name('target_sequence_length:0')
+
+        # Multiply by batch_size to match the model's input parameters
+        answer_logits = sess.run(logits, {input_data: [data[0][1]] * batch_size,
+                                          target_sequence_length: [3] * batch_size,
+                                          source_sequence_length: [66] * batch_size})[0]
+
+    print('  Word Ids:       {}'.format([i for i in answer_logits if i != char_to_int["<PAD>"]]))
+    print('  Response Words: {}'.format(" ".join([int_to_char[i] for i in answer_logits if i != char_to_int["<PAD>"]])))

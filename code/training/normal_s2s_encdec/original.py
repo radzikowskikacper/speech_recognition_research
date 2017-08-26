@@ -156,7 +156,7 @@ def seq2seq_model(input_data, targets, lr, target_sequence_length,
     _, enc_state = encoding_layer(input_data,
                                   rnn_size,
                                   num_layers,
-                                  source_sequence_length,
+                                  None, #source_sequence_length,
                                   source_vocab_size,
                                   encoding_embedding_size)
 
@@ -189,7 +189,7 @@ with train_graph.as_default():
                                                                       lr,
                                                                       target_sequence_length,
                                                                       max_target_sequence_length,
-                                                                      source_sequence_length,
+                                                                      None, #source_sequence_length,
                                                                       len(source_letter_to_int),
                                                                       len(target_letter_to_int),
                                                                       encoding_embedding_size,
@@ -223,7 +223,6 @@ with train_graph.as_default():
 def pad_sentence_batch(sentence_batch, pad_int):
     """Pad sentences with <PAD> so that each sentence of a batch has the same length"""
     max_sentence = max([len(sentence) for sentence in sentence_batch])
-    #return sentence_batch
     return [sentence + [pad_int] * (max_sentence - len(sentence)) for sentence in sentence_batch]
 
 
@@ -276,8 +275,8 @@ with tf.Session(graph=train_graph) as sess:
                 {input_data: sources_batch,
                  targets: targets_batch,
                  lr: learning_rate,
-                 target_sequence_length: targets_lengths,
-                 source_sequence_length: sources_lengths})
+                 target_sequence_length: targets_lengths})
+                 #source_sequence_length: sources_lengths})
 
             # Debug message updating us on the status of the training
             if batch_i % display_step == 0 and batch_i > 0:

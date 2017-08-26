@@ -3,7 +3,7 @@ from feature_extraction import extraction
 from random import shuffle
 
 def get_alphabet(data):
-    alphabet = sorted(list(set([c for _, _, text in data for c in text.lower()])))
+    alphabet = sorted(list(set([c for _, _, text in data for c in text])))
     return alphabet
 
 def batch_generator(data, batch_size, char_to_int, mix = True):
@@ -22,8 +22,8 @@ def batch_generator(data, batch_size, char_to_int, mix = True):
             #lbl = np.pad(data[i][2], ((0, labels_max_length - len(data[i][2]))), mode='constant', constant_values='<PAD>')
             lbl = data[i][2] + [char_to_int['<PAD>']] * (labels_max_length - len(data[i][2]))
             #labels.append(data[i][2])
-            #lbl = [np.eye(len(alphabet))[alphabet.index(c)] for c in data[i][2].lower()]
-            #lbl = np.eye(len(alphabet))[alphabet.index(data[i][2].lower()[0])]
+            #lbl = [np.eye(len(alphabet))[alphabet.index(c)] for c in data[i][2]]
+            #lbl = np.eye(len(alphabet))[alphabet.index(data[i][2][0])]
             labels.append(lbl)
             if len(samples) >= batch_size:
                 samples_lengths = [d.shape[0] for d in samples]
@@ -53,7 +53,7 @@ def load_data(path):
             if i >= 2:
                 break
             data.append((os.path.join(root, file), np.array(extraction.get_features_vector(os.path.join(root, file))).T,
-                         fname_to_text[file[:-4]]))
+                         fname_to_text[file[:-4]].lower()))
             i += 1
 
     return data

@@ -134,6 +134,9 @@ def demo():
     int_to_char = {i : char for i, char in enumerate(tokens + alphabet)}
     char_to_int = {char : i for i, char in int_to_char.items()}
     data = [(d[0], d[1], [char_to_int[char] for char in d[2]]) for d in data]
+    data = tf_loader.pad_data(data, char_to_int)
+    tf_loader.save_data_to_file(data, 'data.dat')
+    return
 
     # Build the graph
     train_graph = tf.Graph()
@@ -209,7 +212,7 @@ def demo():
                           .format(epoch_i,
                                   epochs,
                                   batch_i,
-                                  len(sources_batch) // batch_size,
+                                  len(data) // batch_size,
                                   loss,
                                   validation_loss[0]))
                 if jj == 20:
@@ -232,9 +235,9 @@ def demo():
         source_sequence_length = loaded_graph.get_tensor_by_name('source_sequence_length:0')
         target_sequence_length = loaded_graph.get_tensor_by_name('target_sequence_length:0')
 
-        for i in [0, 1]:
+        for j in [0, 1]:
             # Multiply by batch_size to match the model's input parameters
-            answer_logits = sess.run(logits, {input_data: [data[i][1]] * batch_size,
+            answer_logits = sess.run(logits, {input_data: [data[j][1]] * batch_size,
                                               target_sequence_length: [3] * batch_size,
                                               source_sequence_length: [66] * batch_size})[0]
 

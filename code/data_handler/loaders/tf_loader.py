@@ -6,31 +6,34 @@ def get_alphabet(data):
     alphabet = sorted(list(set([c for _, _, text in data for c in text])))
     return alphabet
 
-def batch_generator(data, batch_size, char_to_int, mix = True):
+def pad_data(data, char_to_int):
+    samples_max_length = max([d[1].shape[0] for d in data])
+    labels_max_length = max([len(d[2]) for d in data])
+
+    for i in range(len(data)):
+        data[i] = (data[i][0],
+                   np.pad(data[i][1], ((0, samples_max_length - data[i][1].shape[0]), (0, 0)), mode='constant', constant_values=0),
+                   data[i][2] + [char_to_int['<PAD>']] * (labels_max_length - len(data[i][2])))
+
+    return data
+
+def batch_generator(data, batch_size, mix = True):
     samples = []
     labels = []
 
-    samples_max_length = max([d[1].shape[0] for d in data])
-    labels_max_length = max([len(d[2]) for d in data])
     while True:
         if mix:
             shuffle(data)
         for i in range(len(data)):
-            dt = np.pad(data[i][1], ((0, samples_max_length - data[i][1].shape[0]), (0, 0)), mode='constant', constant_values=0)
-            samples.append(np.array(dt))
-            #samples.append(data[i][1])
-            #lbl = np.pad(data[i][2], ((0, labels_max_length - len(data[i][2]))), mode='constant', constant_values='<PAD>')
-            lbl = data[i][2] + [char_to_int['<PAD>']] * (labels_max_length - len(data[i][2]))
-            #labels.append(data[i][2])
-            #lbl = [np.eye(len(alphabet))[alphabet.index(c)] for c in data[i][2]]
-            #lbl = np.eye(len(alphabet))[alphabet.index(data[i][2][0])]
-            labels.append(lbl)
+            samples.append(data[i][1])
+            labels.append(data[i][2])
             if len(samples) >= batch_size:
                 samples_lengths = [d.shape[0] for d in samples]
                 labels_lengths = [len(l) for l in labels]
                 yield samples, labels, samples_lengths, labels_lengths
                 samples = []
                 labels = []
+        #break
 
 def load_data(path):
     data_dir = os.path.join(path, 'wav', 'JE')
@@ -50,10 +53,18 @@ def load_data(path):
     i = 0
     for root, dirs, files in os.walk(data_dir):
         for file in files:
-            if i >= 2:
+            if i >= 200:
                 break
             data.append((os.path.join(root, file), np.array(extraction.get_features_vector(os.path.join(root, file))).T,
                          fname_to_text[file[:-4]].lower()))
             i += 1
 
     return data
+
+def save_data_to_file(data, path):
+    with open(path, 'w+') as f:
+        for d in data:
+            f.write(d[0] + '\n')
+            for feat in d[1].T:
+                f.write(' '.join([str(f) for f in feat]) + '\n')
+            f.write(' '.join([str(f) for f in d[2]]) + '\n')

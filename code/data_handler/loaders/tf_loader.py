@@ -1,6 +1,7 @@
 import os, numpy as np
 from feature_extraction import extraction
 from random import shuffle
+from threading import Thread
 
 def get_alphabet(data):
     alphabet = sorted(list(set([c for _, _, text in data for c in text])))
@@ -57,18 +58,26 @@ def load_data(path):
             #if i % 1000 == 0:
             #    print(i)
 #                break
-            #data.append((os.path.join(root, file), np.array(extraction.get_features_vector(os.path.join(root, file))).T,
-            #             fname_to_text[file[:-4]].lower()))
+            data.append((os.path.join(root, file), 0,#np.array(extraction.get_features_vector(os.path.join(root, file))).T,
+                         fname_to_text[file[:-4]].lower()))
             i += 1
 
-    for root, dirs, files in os.walk(data_dir):
-        for file in files:
-            if j % 100 == 0:
-                print('{} / {}'.format(j, i))
-            #                break
-            data.append((os.path.join(root, file), np.array(extraction.get_features_vector(os.path.join(root, file))).T,
-                         fname_to_text[file[:-4]].lower()))
-            j += 1
+    def proc(start, end, id):
+        for k in range(start, end):
+            if k % 1000 == 0 and k > 0:
+                print('[{}] {} %'.format(id, (k - start) / (end - start)))
+            data[k] = (data[k][0], np.array(extraction.get_features_vector(data[k][0])).T, data[k][1])
+
+    procs = 3
+    ts = []
+    for k in range(procs):
+        print("{} - {}, {}".format(int(k * i / procs), int((k + 1) * i / procs), i))
+        ts.append(Thread(target=proc, args=(int(k * i / procs), int((k + 1) * i / procs), k,)))
+
+    for t in ts:
+        t.start()
+    for t in ts:
+        t.join()
 
     return data
 

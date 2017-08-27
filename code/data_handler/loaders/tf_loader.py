@@ -64,7 +64,7 @@ def load_data(path):
 
     def proc(start, end, id):
         for k in range(start, end):
-            if k % 200 == 0 and k > 0:
+            if k % 20 == 0 and k > 0:
                 print('[{}] {} %'.format(id, (k - start) / (end - start) * 100))
             data[k] = (data[k][0], np.array(extraction.get_features_vector(data[k][0])).T, data[k][2])
 

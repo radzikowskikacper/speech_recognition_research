@@ -55,9 +55,9 @@ def load_data(path):
     j = 0
     for root, dirs, files in os.walk(data_dir):
         for file in files:
-            #if i % 1000 == 0:
+            if i == 100:
             #    print(i)
-#                break
+                break
             data.append((os.path.join(root, file), 0,#np.array(extraction.get_features_vector(os.path.join(root, file))).T,
                          fname_to_text[file[:-4]].lower()))
             i += 1
@@ -66,7 +66,7 @@ def load_data(path):
         for k in range(start, end):
             if k % 1000 == 0 and k > 0:
                 print('[{}] {} %'.format(id, (k - start) / (end - start) * 100))
-            data[k] = (data[k][0], np.array(extraction.get_features_vector(data[k][0])).T, data[k][1])
+            data[k] = (data[k][0], np.array(extraction.get_features_vector(data[k][0])).T, data[k][2])
 
     procs = 3
     ts = []

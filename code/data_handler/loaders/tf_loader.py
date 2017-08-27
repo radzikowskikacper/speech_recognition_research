@@ -1,4 +1,4 @@
-import os, numpy as np
+import os, numpy as np, traceback
 from feature_extraction import extraction
 from random import shuffle
 from threading import Thread
@@ -62,13 +62,18 @@ def load_data(path):
                          fname_to_text[file[:-4]].lower()))
             i += 1
 
+    to_delete = []
     def proc(start, end, id):
         for k in range(start, end):
-            if k % 1 == 0 and k > 0:
-                print('[{}] {} % - {}'.format(id, (k - start) / (end - start) * 100, data[k][0]))
-            data[k] = (data[k][0], np.array(extraction.get_features_vector(data[k][0])).T, data[k][2])
+            if k % 200 == 0 and k > 0:
+                print('[{}] {} %'.format(id, (k - start) / (end - start) * 100))
+            try:
+                data[k] = (data[k][0], np.array(extraction.get_features_vector(data[k][0])).T, data[k][2])
+            except:
+                to_delete.append(k)
+                traceback.print_exc()
 
-    procs = 8
+    procs = 4
     ts = []
     for k in range(procs):
         print("{} - {}, {}".format(int(k * i / procs), int((k + 1) * i / procs), i))
@@ -78,6 +83,9 @@ def load_data(path):
         t.start()
     for t in ts:
         t.join()
+
+    for k in to_delete:
+        del data[k]
 
     return data
 

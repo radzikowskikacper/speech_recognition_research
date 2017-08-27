@@ -3,7 +3,7 @@ from tensorflow.python.layers.core import Dense
 from data_handler.loaders import tf_loader
 import numpy as np
 
-batch_size = 128
+batch_size = 16
 # Number of Epochs
 epochs = 60
 # RNN Size
@@ -129,22 +129,13 @@ def create_model(input_data, targets, lr, target_sequence_length, max_target_seq
     return training_decoder_output, inference_decoder_output
 
 def demo():
-    data = tf_loader.load_data('../data/umeerj/ume-erj/')
+    data = tf_loader.load_data_from_file('data.dat', 20, 700)#tf_loader.load_data('../data/umeerj/ume-erj/')
     alphabet = tf_loader.get_alphabet(data)
     tokens = ['<PAD>', '<UNK>', '<GO>', '<EOS>']
     int_to_char = {i : char for i, char in enumerate(tokens + alphabet)}
     char_to_int = {char : i for i, char in int_to_char.items()}
     data = [(d[0], d[1], [char_to_int[char] for char in d[2]]) for d in data]
-    data = tf_loader.pad_data(data, char_to_int)
-    tf_loader.save_data_to_file(data, 'data.dat')
-    data2 = tf_loader.load_data_from_file('data.dat', 20, len(data))
-    assert (len(data2) == len(data))
-    for d1, d2 in zip(data, data2):
-        assert(d1[0] == d2[0])
-        assert(np.allclose(d1[1], d2[1]))
-        assert (d1[2] == d2[2])
-    print(len(data))
-    return
+    #data = tf_loader.pad_data(data, char_to_int)
 
     # Build the graph
     train_graph = tf.Graph()

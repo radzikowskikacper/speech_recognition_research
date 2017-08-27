@@ -55,20 +55,20 @@ def load_data(path):
     j = 0
     for root, dirs, files in os.walk(data_dir):
         for file in files:
-            if i == 100:
+            #if i == 1:
             #    print(i)
-                break
+            #    break
             data.append((os.path.join(root, file), 0,#np.array(extraction.get_features_vector(os.path.join(root, file))).T,
                          fname_to_text[file[:-4]].lower()))
             i += 1
 
     def proc(start, end, id):
         for k in range(start, end):
-            if k % 1000 == 0 and k > 0:
+            if k % 200 == 0 and k > 0:
                 print('[{}] {} %'.format(id, (k - start) / (end - start) * 100))
             data[k] = (data[k][0], np.array(extraction.get_features_vector(data[k][0])).T, data[k][2])
 
-    procs = 3
+    procs = 4
     ts = []
     for k in range(procs):
         print("{} - {}, {}".format(int(k * i / procs), int((k + 1) * i / procs), i))
@@ -88,3 +88,15 @@ def save_data_to_file(data, path):
             for feat in d[1].T:
                 f.write(' '.join([str(f) for f in feat]) + '\n')
             f.write(' '.join([str(f) for f in d[2]]) + '\n')
+
+def load_data_from_file(path, num_features, samples):
+    data = []
+    with open(path) as f:
+        for _ in range(samples):
+            fname = f.readline().strip()
+            nums = []
+            for i in range(num_features):
+                nums.append(np.array([float(n) for n in f.readline().split()]))
+            text = f.readline()
+            data.append((fname, np.array(nums).T, [int(t) for t in text.split()]))
+    return data

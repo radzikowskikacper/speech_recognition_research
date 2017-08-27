@@ -71,6 +71,7 @@ def load_data(path):
             try:
                 data[k] = (data[k][0], np.array(extraction.get_features_vector(data[k][0])).T, data[k][2])
             except:
+                print(data[k][0])
                 traceback.print_exc()
                 try:
                     lck.acquire()

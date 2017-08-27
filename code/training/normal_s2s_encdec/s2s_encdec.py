@@ -143,6 +143,7 @@ def demo():
         assert(d1[0] == d2[0])
         assert(np.allclose(d1[1], d2[1]))
         assert (d1[2] == d2[2])
+    print(len(data))
     return
 
     # Build the graph

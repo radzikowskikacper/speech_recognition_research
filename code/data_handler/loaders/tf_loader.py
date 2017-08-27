@@ -51,13 +51,24 @@ def load_data(path):
     print("Raw data preparation")
 
     i = 0
+    j = 0
     for root, dirs, files in os.walk(data_dir):
         for file in files:
-            if i >= 200:
-                break
+            #if i % 1000 == 0:
+            #    print(i)
+#                break
+            #data.append((os.path.join(root, file), np.array(extraction.get_features_vector(os.path.join(root, file))).T,
+            #             fname_to_text[file[:-4]].lower()))
+            i += 1
+
+    for root, dirs, files in os.walk(data_dir):
+        for file in files:
+            if j % 100 == 0:
+                print('{} / {}'.format(j, i))
+            #                break
             data.append((os.path.join(root, file), np.array(extraction.get_features_vector(os.path.join(root, file))).T,
                          fname_to_text[file[:-4]].lower()))
-            i += 1
+            j += 1
 
     return data
 

@@ -1,7 +1,7 @@
 import os, numpy as np, traceback
 from feature_extraction import extraction
 from random import shuffle
-from threading import Thread
+from threading import Thread, Lock
 
 def get_alphabet(data):
     alphabet = sorted(list(set([c for _, _, text in data for c in text])))
@@ -55,7 +55,7 @@ def load_data(path):
     j = 0
     for root, dirs, files in os.walk(data_dir):
         for file in files:
-            #if i == 1:
+            #if i == 2500:
             #    print(i)
             #    break
             data.append((os.path.join(root, file), 0,#np.array(extraction.get_features_vector(os.path.join(root, file))).T,
@@ -63,6 +63,7 @@ def load_data(path):
             i += 1
 
     to_delete = []
+    lck = Lock()
     def proc(start, end, id):
         for k in range(start, end):
             if k % 200 == 0 and k > 0:
@@ -70,8 +71,12 @@ def load_data(path):
             try:
                 data[k] = (data[k][0], np.array(extraction.get_features_vector(data[k][0])).T, data[k][2])
             except:
-                to_delete.append(k)
                 traceback.print_exc()
+                try:
+                    lck.acquire()
+                    to_delete.append(k)
+                finally:
+                    lck.release()
 
     procs = 4
     ts = []
@@ -84,7 +89,7 @@ def load_data(path):
     for t in ts:
         t.join()
 
-    for k in to_delete:
+    for k in reversed(sorted(to_delete)):
         del data[k]
 
     return data

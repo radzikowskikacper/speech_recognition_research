@@ -129,7 +129,7 @@ def demo(arguments):
     learning_rate = float(arguments[4])
     embedding_size = int(arguments[5])
 
-    data = tf_loader.load_data_from_file('data2.dat', 20, 10000)#tf_loader.load_data('../data/umeerj/ume-erj/')
+    data = tf_loader.load_data_from_file('data2.dat', 20, 70090)#tf_loader.load_data('../data/umeerj/ume-erj/')
     alphabet = tf_loader.get_alphabet(data)
     tokens = ['<PAD>', '<UNK>', '<GO>', '<EOS>']
     int_to_char = {i : char for i, char in enumerate(tokens + alphabet)}
@@ -261,3 +261,9 @@ def demo(arguments):
 
             print('  Word Ids:       {}'.format([i for i in answer_logits if i != char_to_int["<PAD>"]]))
             print('  Response Words: {}'.format(" ".join([int_to_char[i] for i in answer_logits if i != char_to_int["<PAD>"]])))
+
+def dispatch():
+    devices = ['/gpu:0', '/gpu:1']
+
+    with tf.device(devices[0]):
+        demo([16, 10, 25, 2, 0.001, 15])

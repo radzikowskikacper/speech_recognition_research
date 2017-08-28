@@ -228,7 +228,9 @@ def demo():
     checkpoint = "./best_model.ckpt"
 
     loaded_graph = tf.Graph()
-    with tf.Session(graph=loaded_graph) as sess:
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
+    with tf.Session(graph=loaded_graph, config=config) as sess:
         # Load saved model
         loader = tf.train.import_meta_graph(checkpoint + '.meta')
         loader.restore(sess, checkpoint)

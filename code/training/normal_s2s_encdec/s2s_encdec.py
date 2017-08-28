@@ -190,7 +190,6 @@ def demo():
     with tf.Session(graph=train_graph) as sess:
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
-        epochs = 1
         for epoch_i in range(1, epochs + 1):
             for batch_i, (source_batch, target_batch, source_lengths, target_lengths) in enumerate(
                     tf_loader.batch_generator(training_data, batch_size, char_to_int)):

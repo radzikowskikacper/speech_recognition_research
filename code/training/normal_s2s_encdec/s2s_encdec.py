@@ -85,10 +85,10 @@ def create_decoder(char_to_int, embedding_size, num_layers, rnn_size, target_seq
         # Reuses the same parameters trained by the training process
         with tf.variable_scope("decode", reuse=True):
             with tf.device(device):
-                    start_tokens = tf.tile(tf.constant([char_to_int['<GO>']], dtype=tf.int32), [batch_size],
+                start_tokens = tf.tile(tf.constant([char_to_int['<GO>']], dtype=tf.int32), [batch_size],
                                        name='start_tokens')
 
-                # Helper for the inference process.
+                # Helper for the inference process
                 inference_helper = tf.contrib.seq2seq.GreedyEmbeddingHelper(embeddings,
                                                                             start_tokens,
                                                                             char_to_int['<EOS>'])

@@ -1,4 +1,4 @@
-import tensorflow as tf, numpy as np
+import tensorflow as tf, numpy as np, time
 from tensorflow.python.layers.core import Dense
 from data_handler.loaders import tf_loader
 from random import shuffle
@@ -199,6 +199,7 @@ def demo(arguments):
         for epoch_i in range(1, epochs + 1):
             for batch_i, (source_batch, target_batch, source_lengths, target_lengths) in enumerate(
                     tf_loader.batch_generator(training_data, batch_size, char_to_int)):
+                tstart = time.time()
 
                 # Training step
                 _, loss, training_accuracy = sess.run(
@@ -229,14 +230,14 @@ def demo(arguments):
 
                     print('Epoch {:>3}/{} Batch {:>4}/{}  - '
                           'Training loss: {:>6.3f}  - Training accuracy: {}  - Validation loss: {:>6.3f}  - Validation accuracy: {}  - '
-                          'Batch size: {}  - RNN size: {}  - Layers: {}  - LR: {}  - Emb: {}'
+                          'Batch size: {}  - RNN size: {}  - Layers: {}  - LR: {}  - Emb: {}  - Time: {} s'
                           .format(epoch_i,
                                   epochs,
                                   batch_i,
                                   len(data) // batch_size,
                                   loss, training_accuracy,
                                   np.average(np.array(val_losses)), (np.average(np.array(accs1)), np.average(np.array(accs2))),
-                                  batch_size, rnn_size, num_layers, learning_rate, embedding_size))
+                                  batch_size, rnn_size, num_layers, learning_rate, embedding_size, time.time() - tstart))
                     #break
 
         # Save Model

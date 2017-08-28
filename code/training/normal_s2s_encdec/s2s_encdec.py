@@ -129,7 +129,7 @@ def create_model(input_data, targets, lr, target_sequence_length, max_target_seq
     return training_decoder_output, inference_decoder_output
 
 def demo():
-    data = tf_loader.load_data_from_file('data2.dat', 20, 70090)#tf_loader.load_data('../data/umeerj/ume-erj/')
+    data = tf_loader.load_data_from_file('data2.dat', 20, 10000)#tf_loader.load_data('../data/umeerj/ume-erj/')
     alphabet = tf_loader.get_alphabet(data)
     tokens = ['<PAD>', '<UNK>', '<GO>', '<EOS>']
     int_to_char = {i : char for i, char in enumerate(tokens + alphabet)}
@@ -169,6 +169,8 @@ def demo():
                 targets,
                 masks)
 
+            accuracy = tf.metrics.accuracy(labels=targets, predictions=inference_logits)
+
             # Optimizer
             optimizer = tf.train.AdamOptimizer(lr)
 
@@ -187,13 +189,15 @@ def demo():
     testing_source_batch, testing_target_batch, testing_source_lengths, testing_target_lengths = next(testing_generator)
     with tf.Session(graph=train_graph) as sess:
         sess.run(tf.global_variables_initializer())
+        sess.run(tf.local_variables_initializer())
+        epochs = 1
         for epoch_i in range(1, epochs + 1):
             for batch_i, (source_batch, target_batch, source_lengths, target_lengths) in enumerate(
                     tf_loader.batch_generator(training_data, batch_size, char_to_int)):
 
                 # Training step
-                _, loss = sess.run(
-                    [train_op, cost],
+                _, loss, training_accuracy = sess.run(
+                    [train_op, cost, accuracy],
                     {input_data: source_batch,
                      targets: target_batch,
                      lr: learning_rate,
@@ -202,23 +206,22 @@ def demo():
 
                 # Debug message updating us on the status of the training
                 if batch_i % display_step == 0 and batch_i > 0:
-
-                    # Calculate validation cost
-                    validation_loss = sess.run(
-                        [cost],
+                    validation_loss, validation_accuracy = sess.run(
+                        [cost, accuracy],
                         {input_data: testing_source_batch,
                          targets: testing_target_batch,
                          lr: learning_rate,
                          target_sequence_length: testing_target_lengths,
                          source_sequence_length: testing_source_lengths})
 
-                    print('Epoch {:>3}/{} Batch {:>4}/{} - Loss: {:>6.3f}  - Validation loss: {:>6.3f}'
+                    print('Epoch {:>3}/{} Batch {:>4}/{}  - Training loss: {:>6.3f}  - Training accuracy: {}  - Validation loss: {:>6.3f}  - Validation accuracy: {}'
                           .format(epoch_i,
                                   epochs,
                                   batch_i,
                                   len(data) // batch_size,
-                                  loss,
-                                  validation_loss[0]))
+                                  loss, training_accuracy,
+                                  validation_loss, validation_accuracy))
+                    #break
 
         # Save Model
         saver = tf.train.Saver()

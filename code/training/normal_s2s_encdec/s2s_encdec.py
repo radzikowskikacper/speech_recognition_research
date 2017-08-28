@@ -140,113 +140,115 @@ def demo():
     print(len(data))
 
     # Build the graph
-    train_graph = tf.Graph()
-    # Set the graph to default to ensure that it is ready for training
-    with train_graph.as_default():
-        # Load the model inputs
-        input_data, targets, lr, target_sequence_length, max_target_sequence_length, source_sequence_length = get_model_inputs(data[0][1].shape[1])
+    tf.logging.set_verbosity(tf.logging.ERROR)
+    with tf.device('/gpu:0'):
+        train_graph = tf.Graph()
+        # Set the graph to default to ensure that it is ready for training
+        with train_graph.as_default():
+            # Load the model inputs
+            input_data, targets, lr, target_sequence_length, max_target_sequence_length, source_sequence_length = get_model_inputs(data[0][1].shape[1])
 
-        # Create the training and inference logits
-        training_decoder_output, inference_decoder_output = create_model(input_data,
-                                                                          targets,
-                                                                          lr,
-                                                                          target_sequence_length,
-                                                                          max_target_sequence_length,
-                                                                          rnn_size,
-                                                                          num_layers, char_to_int, source_sequence_length)
+            # Create the training and inference logits
+            training_decoder_output, inference_decoder_output = create_model(input_data,
+                                                                              targets,
+                                                                              lr,
+                                                                              target_sequence_length,
+                                                                              max_target_sequence_length,
+                                                                              rnn_size,
+                                                                              num_layers, char_to_int, source_sequence_length)
 
-        # Create tensors for the training logits and inference logits
-        training_logits = tf.identity(training_decoder_output[0].rnn_output, 'logits')
-        inference_logits = tf.identity(inference_decoder_output[0].sample_id, name='predictions')
+            # Create tensors for the training logits and inference logits
+            training_logits = tf.identity(training_decoder_output[0].rnn_output, 'logits')
+            inference_logits = tf.identity(inference_decoder_output[0].sample_id, name='predictions')
 
-        # Create the weights for sequence_loss
-        masks = tf.sequence_mask(target_sequence_length, max_target_sequence_length, dtype=tf.float32, name='masks')
+            # Create the weights for sequence_loss
+            masks = tf.sequence_mask(target_sequence_length, max_target_sequence_length, dtype=tf.float32, name='masks')
 
-        with tf.name_scope("optimization"):
-            # Loss function
-            cost = tf.contrib.seq2seq.sequence_loss(
-                training_logits,
-                targets,
-                masks)
+            with tf.name_scope("optimization"):
+                # Loss function
+                cost = tf.contrib.seq2seq.sequence_loss(
+                    training_logits,
+                    targets,
+                    masks)
 
-            accuracy = tf.metrics.accuracy(labels=targets, predictions=inference_logits)
+                accuracy = tf.metrics.accuracy(labels=targets, predictions=inference_logits)
 
-            # Optimizer
-            optimizer = tf.train.AdamOptimizer(lr)
+                # Optimizer
+                optimizer = tf.train.AdamOptimizer(lr)
 
-            # Gradient Clipping
-            gradients = optimizer.compute_gradients(cost)
-            capped_gradients = [(tf.clip_by_value(grad, -5., 5.), var) for grad, var in gradients if grad is not None]
-            train_op = optimizer.apply_gradients(capped_gradients)
+                # Gradient Clipping
+                gradients = optimizer.compute_gradients(cost)
+                capped_gradients = [(tf.clip_by_value(grad, -5., 5.), var) for grad, var in gradients if grad is not None]
+                train_op = optimizer.apply_gradients(capped_gradients)
 
-    display_step = 20  # Check training loss after every 20 batches
-    checkpoint = "best_model.ckpt"
+        display_step = 20  # Check training loss after every 20 batches
+        checkpoint = "best_model.ckpt"
 
-    shuffle(data)
-    training_data = data[:int(0.8 * len(data))]
-    testing_data = data[int(0.8 * len(data)):]
-    testing_generator = tf_loader.batch_generator(testing_data, batch_size, char_to_int, 'testing')
-    testing_source_batch, testing_target_batch, testing_source_lengths, testing_target_lengths = next(testing_generator)
-    with tf.Session(graph=train_graph) as sess:
-        sess.run(tf.global_variables_initializer())
-        sess.run(tf.local_variables_initializer())
-        for epoch_i in range(1, epochs + 1):
-            for batch_i, (source_batch, target_batch, source_lengths, target_lengths) in enumerate(
-                    tf_loader.batch_generator(training_data, batch_size, char_to_int)):
+        shuffle(data)
+        training_data = data[:int(0.8 * len(data))]
+        testing_data = data[int(0.8 * len(data)):]
+        testing_generator = tf_loader.batch_generator(testing_data, batch_size, char_to_int, 'testing')
+        testing_source_batch, testing_target_batch, testing_source_lengths, testing_target_lengths = next(testing_generator)
+        with tf.Session(graph=train_graph) as sess:
+            sess.run(tf.global_variables_initializer())
+            sess.run(tf.local_variables_initializer())
+            for epoch_i in range(1, epochs + 1):
+                for batch_i, (source_batch, target_batch, source_lengths, target_lengths) in enumerate(
+                        tf_loader.batch_generator(training_data, batch_size, char_to_int)):
 
-                # Training step
-                _, loss, training_accuracy = sess.run(
-                    [train_op, cost, accuracy],
-                    {input_data: source_batch,
-                     targets: target_batch,
-                     lr: learning_rate,
-                     target_sequence_length: target_lengths,
-                    source_sequence_length: source_lengths})
-
-                # Debug message updating us on the status of the training
-                if batch_i % display_step == 0 and batch_i > 0:
-                    validation_loss, validation_accuracy = sess.run(
-                        [cost, accuracy],
-                        {input_data: testing_source_batch,
-                         targets: testing_target_batch,
+                    # Training step
+                    _, loss, training_accuracy = sess.run(
+                        [train_op, cost, accuracy],
+                        {input_data: source_batch,
+                         targets: target_batch,
                          lr: learning_rate,
-                         target_sequence_length: testing_target_lengths,
-                         source_sequence_length: testing_source_lengths})
+                         target_sequence_length: target_lengths,
+                        source_sequence_length: source_lengths})
 
-                    print('Epoch {:>3}/{} Batch {:>4}/{}  - Training loss: {:>6.3f}  - Training accuracy: {}  - Validation loss: {:>6.3f}  - Validation accuracy: {}'
-                          .format(epoch_i,
-                                  epochs,
-                                  batch_i,
-                                  len(data) // batch_size,
-                                  loss, training_accuracy,
-                                  validation_loss, validation_accuracy))
-                    #break
+                    # Debug message updating us on the status of the training
+                    if batch_i % display_step == 0 and batch_i > 0:
+                        validation_loss, validation_accuracy = sess.run(
+                            [cost, accuracy],
+                            {input_data: testing_source_batch,
+                             targets: testing_target_batch,
+                             lr: learning_rate,
+                             target_sequence_length: testing_target_lengths,
+                             source_sequence_length: testing_source_lengths})
 
-        # Save Model
-        saver = tf.train.Saver()
-        saver.save(sess, checkpoint)
-        print('Model Trained and Saved')
+                        print('Epoch {:>3}/{} Batch {:>4}/{}  - Training loss: {:>6.3f}  - Training accuracy: {}  - Validation loss: {:>6.3f}  - Validation accuracy: {}'
+                              .format(epoch_i,
+                                      epochs,
+                                      batch_i,
+                                      len(data) // batch_size,
+                                      loss, training_accuracy,
+                                      validation_loss, validation_accuracy))
+                        #break
 
-    checkpoint = "./best_model.ckpt"
+            # Save Model
+            saver = tf.train.Saver()
+            saver.save(sess, checkpoint)
+            print('Model Trained and Saved')
 
-    loaded_graph = tf.Graph()
-    config = tf.ConfigProto()
-    config.gpu_options.allow_growth = True
-    with tf.Session(graph=loaded_graph, config=config) as sess:
-        # Load saved model
-        loader = tf.train.import_meta_graph(checkpoint + '.meta')
-        loader.restore(sess, checkpoint)
+        checkpoint = "./best_model.ckpt"
 
-        input_data = loaded_graph.get_tensor_by_name('input:0')
-        logits = loaded_graph.get_tensor_by_name('predictions:0')
-        source_sequence_length = loaded_graph.get_tensor_by_name('source_sequence_length:0')
-        target_sequence_length = loaded_graph.get_tensor_by_name('target_sequence_length:0')
+        loaded_graph = tf.Graph()
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
+        with tf.Session(graph=loaded_graph, config=config) as sess:
+            # Load saved model
+            loader = tf.train.import_meta_graph(checkpoint + '.meta')
+            loader.restore(sess, checkpoint)
 
-        for j in [0, 1]:
-            # Multiply by batch_size to match the model's input parameters
-            answer_logits = sess.run(logits, {input_data: [data[j][1]] * batch_size,
-                                              target_sequence_length: [3] * batch_size,
-                                              source_sequence_length: [66] * batch_size})[0]
+            input_data = loaded_graph.get_tensor_by_name('input:0')
+            logits = loaded_graph.get_tensor_by_name('predictions:0')
+            source_sequence_length = loaded_graph.get_tensor_by_name('source_sequence_length:0')
+            target_sequence_length = loaded_graph.get_tensor_by_name('target_sequence_length:0')
 
-            print('  Word Ids:       {}'.format([i for i in answer_logits if i != char_to_int["<PAD>"]]))
-            print('  Response Words: {}'.format(" ".join([int_to_char[i] for i in answer_logits if i != char_to_int["<PAD>"]])))
+            for j in [0, 1]:
+                # Multiply by batch_size to match the model's input parameters
+                answer_logits = sess.run(logits, {input_data: [data[j][1]] * batch_size,
+                                                  target_sequence_length: [3] * batch_size,
+                                                  source_sequence_length: [66] * batch_size})[0]
+
+                print('  Word Ids:       {}'.format([i for i in answer_logits if i != char_to_int["<PAD>"]]))
+                print('  Response Words: {}'.format(" ".join([int_to_char[i] for i in answer_logits if i != char_to_int["<PAD>"]])))

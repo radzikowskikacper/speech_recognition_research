@@ -138,7 +138,7 @@ def demo():
     #data = tf_loader.pad_data(data, char_to_int)
     tf_loader.save_data_to_file(data, 'data2.dat')
     print(len(data))
-    data2 = tf_loader.load_data_from_file('data2.dat', 20, 70090)
+    data2 = tf_loader.load_data_from_file('data2.dat', 20, 25)
     assert(len(data) == len(data2))
     for d1, d2 in zip(data, data2):
         assert(d1[0] == d2[0])

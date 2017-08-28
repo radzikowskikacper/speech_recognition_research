@@ -4,7 +4,7 @@ from random import shuffle
 from threading import Thread, Lock
 
 def get_alphabet(data):
-    alphabet = sorted(list(set([c for _, _, _, text in data for c in text])))
+    alphabet = sorted(list(set([c for _, _, text, _, in data for c in text.lower()])))
     return alphabet
 
 def pad_data(data, char_to_int):
@@ -19,23 +19,17 @@ def pad_data(data, char_to_int):
 
     return data
 
-def batch_generator(data, batch_size, mix = True):
-    samples = []
-    labels = []
+def batch_generator(data, batch_size, char_to_int):
+    shuffle(data)
 
-    while True:
-        if mix:
-            shuffle(data)
-        for i in range(len(data)):
-            samples.append(data[i][1])
-            labels.append(data[i][2])
-            if len(samples) >= batch_size:
-                samples_lengths = [d.shape[0] for d in samples]
-                labels_lengths = [len(l) for l in labels]
-                yield samples, labels, samples_lengths, labels_lengths
-                samples = []
-                labels = []
-        break
+    for batch_i in range(len(data) // batch_size):
+        batch_start = batch_size * batch_i
+        batch = pad_data(data[batch_start:batch_start + batch_size], char_to_int)
+        samples = [b[1] for b in batch]
+        labels = [b[3] for b in batch]
+        samples_lengths = [s.shape[0] for s in samples]
+        labels_lengths = [len(l) for l in labels]
+        yield samples, labels, samples_lengths, labels_lengths
 
 def load_data(path):
     data_dir = os.path.join(path, 'wav', 'JE')
@@ -113,6 +107,7 @@ def load_data_from_file(path, num_features, samples):
             nums = []
             for i in range(num_features):
                 nums.append(np.array([float(n) for n in f.readline().split()]))
+            original_text = f.readline()
             text = f.readline()
-            data.append((fname, np.array(nums).T, [int(t) for t in text.split()]))
+            data.append((fname, np.array(nums).T, original_text.strip(), [int(t) for t in text.split()]))
     return data

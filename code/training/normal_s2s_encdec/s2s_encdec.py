@@ -129,8 +129,9 @@ def demo(arguments):
     learning_rate = float(arguments[4])
     embedding_size = int(arguments[5])
     os.environ["CUDA_VISIBLE_DEVICES"] = arguments[6]
-
-    data = tf_loader.load_data_from_file('data2.dat', 20, 10000)#tf_loader.load_data('../data/umeerj/ume-erj/')
+    samples = int(arguments[7])
+    
+    data = tf_loader.load_data_from_file('data2.dat', 20, samples)#tf_loader.load_data('../data/umeerj/ume-erj/')
     alphabet = tf_loader.get_alphabet(data)
     tokens = ['<PAD>', '<UNK>', '<GO>', '<EOS>']
     int_to_char = {i : char for i, char in enumerate(tokens + alphabet)}

@@ -3,16 +3,19 @@ from tensorflow.python.layers.core import Dense
 from data_handler.loaders import tf_loader
 from random import shuffle
 
+device = None
+
 def get_model_inputs(number_of_features):
-    input_data = tf.placeholder(tf.float32, [None, None, number_of_features], name='input')
-    targets = tf.placeholder(tf.int32, [None, None], name='targets')
-    lr = tf.placeholder(tf.float32, name='learning_rate')
+    with tf.device(device):
+        input_data = tf.placeholder(tf.float32, [None, None, number_of_features], name='input')
+        targets = tf.placeholder(tf.int32, [None, None], name='targets')
+        lr = tf.placeholder(tf.float32, name='learning_rate')
 
-    target_sequence_length = tf.placeholder(tf.int32, (None,), name='target_sequence_length')
-    max_target_sequence_length = tf.reduce_max(target_sequence_length, name='max_target_len')
-    source_sequence_length = tf.placeholder(tf.int32, (None,), name='source_sequence_length')
+        target_sequence_length = tf.placeholder(tf.int32, (None,), name='target_sequence_length')
+        max_target_sequence_length = tf.reduce_max(target_sequence_length, name='max_target_len')
+        source_sequence_length = tf.placeholder(tf.int32, (None,), name='source_sequence_length')
 
-    return input_data, targets, lr, target_sequence_length, max_target_sequence_length, source_sequence_length
+        return input_data, targets, lr, target_sequence_length, max_target_sequence_length, source_sequence_length
 
 def create_encoder(input_data, rnn_size, num_layers, source_sequence_length):
     # Encoder embedding
@@ -129,7 +132,7 @@ def demo(arguments):
     learning_rate = float(arguments[4])
     embedding_size = int(arguments[5])
 
-    data = tf_loader.load_data_from_file('data2.dat', 20, 70090)#tf_loader.load_data('../data/umeerj/ume-erj/')
+    data = tf_loader.load_data_from_file('data2.dat', 20, 10000)#tf_loader.load_data('../data/umeerj/ume-erj/')
     alphabet = tf_loader.get_alphabet(data)
     tokens = ['<PAD>', '<UNK>', '<GO>', '<EOS>']
     int_to_char = {i : char for i, char in enumerate(tokens + alphabet)}
@@ -264,6 +267,6 @@ def demo(arguments):
 
 def dispatch():
     devices = ['/gpu:0', '/gpu:1']
-
-    with tf.device(devices[0]):
-        demo([16, 10, 25, 2, 0.001, 15])
+    global device
+    device = devices[1]
+    demo([16, 10, 25, 2, 0.001, 15])

@@ -215,8 +215,7 @@ def demo():
                                   len(data) // batch_size,
                                   loss,
                                   validation_loss[0]))
-                if jj == 20:
-                    break
+
         # Save Model
         saver = tf.train.Saver()
         saver.save(sess, checkpoint)

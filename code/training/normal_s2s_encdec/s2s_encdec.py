@@ -189,7 +189,11 @@ def demo():
         testing_data = data[int(0.8 * len(data)):]
         testing_generator = tf_loader.batch_generator(testing_data, batch_size, char_to_int, 'testing')
         testing_source_batch, testing_target_batch, testing_source_lengths, testing_target_lengths = next(testing_generator)
-        with tf.Session(graph=train_graph) as sess:
+
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
+        config.log_device_placement=True
+        with tf.Session(graph=train_graph, config=config) as sess:
             sess.run(tf.global_variables_initializer())
             sess.run(tf.local_variables_initializer())
             for epoch_i in range(1, epochs + 1):
@@ -232,8 +236,6 @@ def demo():
         checkpoint = "./best_model.ckpt"
 
         loaded_graph = tf.Graph()
-        config = tf.ConfigProto()
-        config.gpu_options.allow_growth = True
         with tf.Session(graph=loaded_graph, config=config) as sess:
             # Load saved model
             loader = tf.train.import_meta_graph(checkpoint + '.meta')

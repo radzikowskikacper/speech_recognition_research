@@ -65,42 +65,44 @@ def create_decoder(char_to_int, embedding_size, num_layers, rnn_size, target_seq
 
         # 4. Training Decoder
         with tf.variable_scope("decode"):
-            # Helper for the training process. Used by BasicDecoder to read inputs.
-            training_helper = tf.contrib.seq2seq.TrainingHelper(inputs=dec_embed_input,
-                                                                sequence_length=target_sequence_length,
-                                                                time_major=False)
+            with tf.device(device):
+                # Helper for the training process. Used by BasicDecoder to read inputs.
+                training_helper = tf.contrib.seq2seq.TrainingHelper(inputs=dec_embed_input,
+                                                                    sequence_length=target_sequence_length,
+                                                                    time_major=False)
 
-            # Basic decoder
-            training_decoder = tf.contrib.seq2seq.BasicDecoder(dec_cell,
-                                                               training_helper,
-                                                               input_data_encoder_state,
-                                                               output_layer)
+                # Basic decoder
+                training_decoder = tf.contrib.seq2seq.BasicDecoder(dec_cell,
+                                                                   training_helper,
+                                                                   input_data_encoder_state,
+                                                                   output_layer)
 
-            # Perform dynamic decoding using the decoder
-            training_decoder_output = tf.contrib.seq2seq.dynamic_decode(training_decoder,
-                                                                        impute_finished=True,
-                                                                        maximum_iterations=max_target_sequence_length)
+                # Perform dynamic decoding using the decoder
+                training_decoder_output = tf.contrib.seq2seq.dynamic_decode(training_decoder,
+                                                                            impute_finished=True,
+                                                                            maximum_iterations=max_target_sequence_length)
         # 5. Inference Decoder
         # Reuses the same parameters trained by the training process
         with tf.variable_scope("decode", reuse=True):
-            start_tokens = tf.tile(tf.constant([char_to_int['<GO>']], dtype=tf.int32), [batch_size],
-                                   name='start_tokens')
+            with tf.device(device):
+                    start_tokens = tf.tile(tf.constant([char_to_int['<GO>']], dtype=tf.int32), [batch_size],
+                                       name='start_tokens')
 
-            # Helper for the inference process.
-            inference_helper = tf.contrib.seq2seq.GreedyEmbeddingHelper(embeddings,
-                                                                        start_tokens,
-                                                                        char_to_int['<EOS>'])
+                # Helper for the inference process.
+                inference_helper = tf.contrib.seq2seq.GreedyEmbeddingHelper(embeddings,
+                                                                            start_tokens,
+                                                                            char_to_int['<EOS>'])
 
-            # Basic decoder
-            inference_decoder = tf.contrib.seq2seq.BasicDecoder(dec_cell,
-                                                                inference_helper,
-                                                                input_data_encoder_state,
-                                                                output_layer)
+                # Basic decoder
+                inference_decoder = tf.contrib.seq2seq.BasicDecoder(dec_cell,
+                                                                    inference_helper,
+                                                                    input_data_encoder_state,
+                                                                    output_layer)
 
-            # Perform dynamic decoding using the decoder
-            inference_decoder_output = tf.contrib.seq2seq.dynamic_decode(inference_decoder,
-                                                                         impute_finished=True,
-                                                                         maximum_iterations=max_target_sequence_length)
+                # Perform dynamic decoding using the decoder
+                inference_decoder_output = tf.contrib.seq2seq.dynamic_decode(inference_decoder,
+                                                                             impute_finished=True,
+                                                                             maximum_iterations=max_target_sequence_length)
 
         return training_decoder_output, inference_decoder_output
 

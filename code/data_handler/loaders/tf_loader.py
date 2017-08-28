@@ -2,6 +2,7 @@ import os, numpy as np, traceback
 from feature_extraction import extraction
 from random import shuffle
 from threading import Thread, Lock
+from collections import defaultdict
 
 def get_alphabet(data):
     alphabet = sorted(list(set([c for _, _, text, _, in data for c in text.lower()])))
@@ -19,17 +20,25 @@ def pad_data(data, char_to_int):
 
     return data
 
-def batch_generator(data, batch_size, char_to_int):
-    shuffle(data)
+batches_saves = defaultdict(list)
 
-    for batch_i in range(len(data) // batch_size):
-        batch_start = batch_size * batch_i
-        batch = pad_data(data[batch_start:batch_start + batch_size], char_to_int)
-        samples = [b[1] for b in batch]
-        labels = [b[3] for b in batch]
-        samples_lengths = [s.shape[0] for s in samples]
-        labels_lengths = [len(l) for l in labels]
-        yield samples, labels, samples_lengths, labels_lengths
+def batch_generator(data, batch_size, char_to_int):
+    #shuffle(data)
+    if batch_size in batches_saves:
+        print("saved")
+        for line in batches_saves[batch_size]:
+            yield line
+    else:
+        print("not saved")
+        for batch_i in range(len(data) // batch_size):
+            batch_start = batch_size * batch_i
+            batch = pad_data(data[batch_start:batch_start + batch_size], char_to_int)
+            samples = [b[1] for b in batch]
+            labels = [b[3] for b in batch]
+            samples_lengths = [s.shape[0] for s in samples]
+            labels_lengths = [len(l) for l in labels]
+            batches_saves[batch_size].append((samples, labels, samples_lengths, labels_lengths))
+            yield samples, labels, samples_lengths, labels_lengths
 
 def load_data(path):
     data_dir = os.path.join(path, 'wav', 'JE')

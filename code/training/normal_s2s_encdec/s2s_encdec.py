@@ -135,8 +135,16 @@ def demo():
     int_to_char = {i : char for i, char in enumerate(tokens + alphabet)}
     char_to_int = {char : i for i, char in int_to_char.items()}
     data = [(d[0], d[1], d[2], [char_to_int[char] for char in d[3]]) for d in data]
-    data = tf_loader.pad_data(data, char_to_int)
+    #data = tf_loader.pad_data(data, char_to_int)
     tf_loader.save_data_to_file(data, 'data2.dat')
+    print(len(data))
+    data2 = tf_loader.load_data_from_file('data2.dat', 20, 70090)
+    assert(len(data) == len(data2))
+    for d1, d2 in zip(data, data2):
+        assert(d1[0] == d2[0])
+        assert(np.allclose(d1[1], d2[1]))
+        assert(d1[2] == d2[2])
+        assert(np.allclose(d1[3], d2[3]))
     return
 
     # Build the graph

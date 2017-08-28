@@ -129,7 +129,7 @@ def demo(arguments):
     learning_rate = float(arguments[4])
     embedding_size = int(arguments[5])
 
-    data = tf_loader.load_data_from_file('data2.dat', 20, 70090)#tf_loader.load_data('../data/umeerj/ume-erj/')
+    data = tf_loader.load_data_from_file('data2.dat', 20, 10000)#tf_loader.load_data('../data/umeerj/ume-erj/')
     alphabet = tf_loader.get_alphabet(data)
     tokens = ['<PAD>', '<UNK>', '<GO>', '<EOS>']
     int_to_char = {i : char for i, char in enumerate(tokens + alphabet)}
@@ -223,13 +223,16 @@ def demo(arguments):
                         accs2.append(validation_accuracy[1])
                         val_losses.append(validation_loss)
 
-                    print('Epoch {:>3}/{} Batch {:>4}/{}  - Training loss: {:>6.3f}  - Training accuracy: {}  - Validation loss: {:>6.3f}  - Validation accuracy: {}'
+                    print('Epoch {:>3}/{} Batch {:>4}/{}  - '
+                          'Training loss: {:>6.3f}  - Training accuracy: {}  - Validation loss: {:>6.3f}  - Validation accuracy: {}  - '
+                          'Batch size: {}  - RNN size: {}  - Layers: {}  - LR: {}  - Emb: {}'
                           .format(epoch_i,
                                   epochs,
                                   batch_i,
                                   len(data) // batch_size,
                                   loss, training_accuracy,
-                                  np.average(np.array(val_losses)), (np.average(np.array(accs1)), np.average(np.array(accs2)))))
+                                  np.average(np.array(val_losses)), (np.average(np.array(accs1)), np.average(np.array(accs2))),
+                                  batch_size, rnn_size, num_layers, learning_rate, embedding_size))
                     #break
 
         # Save Model

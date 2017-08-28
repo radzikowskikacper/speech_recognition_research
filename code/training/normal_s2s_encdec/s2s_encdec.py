@@ -190,8 +190,8 @@ def demo(arguments):
     testing_data = data[int(0.8 * len(data)):]
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
-    config.allow_soft_placement=True
-    config.log_device_placement=True
+    #config.allow_soft_placement=True
+    #config.log_device_placement=True
     with tf.Session(graph=train_graph, config = config) as sess:
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())

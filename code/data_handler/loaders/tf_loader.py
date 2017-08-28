@@ -1,6 +1,5 @@
 import os, numpy as np, traceback
 from feature_extraction import extraction
-from random import shuffle
 from threading import Thread, Lock
 from collections import defaultdict
 
@@ -22,14 +21,11 @@ def pad_data(data, char_to_int):
 
 batches_saves = defaultdict(list)
 
-def batch_generator(data, batch_size, char_to_int):
-    #shuffle(data)
-    if batch_size in batches_saves:
-        print("saved")
-        for line in batches_saves[batch_size]:
+def batch_generator(data, batch_size, char_to_int, mode = 'training'):
+    if mode in batches_saves:
+        for line in batches_saves[mode]:
             yield line
     else:
-        print("not saved")
         for batch_i in range(len(data) // batch_size):
             batch_start = batch_size * batch_i
             batch = pad_data(data[batch_start:batch_start + batch_size], char_to_int)
@@ -37,7 +33,7 @@ def batch_generator(data, batch_size, char_to_int):
             labels = [b[3] for b in batch]
             samples_lengths = [s.shape[0] for s in samples]
             labels_lengths = [len(l) for l in labels]
-            batches_saves[batch_size].append((samples, labels, samples_lengths, labels_lengths))
+            batches_saves[mode].append((samples, labels, samples_lengths, labels_lengths))
             yield samples, labels, samples_lengths, labels_lengths
 
 def load_data(path):

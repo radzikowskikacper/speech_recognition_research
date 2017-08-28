@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow.python.layers.core import Dense
 from data_handler.loaders import tf_loader
-import numpy as np
+from random import shuffle
 
 batch_size = 16
 # Number of Epochs
@@ -178,35 +178,39 @@ def demo():
             train_op = optimizer.apply_gradients(capped_gradients)
 
     display_step = 20  # Check training loss after every 20 batches
-
     checkpoint = "best_model.ckpt"
+
+    shuffle(data)
+    training_data = data[:int(0.8 * len(data))]
+    testing_data = data[int(0.8 * len(data)):]
+    testing_generator = tf_loader.batch_generator(testing_data, batch_size, char_to_int, 'testing')
+    testing_source_batch, testing_target_batch, testing_source_lengths, testing_target_lengths = next(testing_generator)
     with tf.Session(graph=train_graph) as sess:
         sess.run(tf.global_variables_initializer())
         for epoch_i in range(1, epochs + 1):
-            jj = 0
-            for batch_i, (sources_batch, targets_batch, sources_lengths, targets_lengths) in enumerate(
-                    tf_loader.batch_generator(data, batch_size, char_to_int)):
+            for batch_i, (source_batch, target_batch, source_lengths, target_lengths) in enumerate(
+                    tf_loader.batch_generator(training_data, batch_size, char_to_int)):
 
                 # Training step
                 _, loss = sess.run(
                     [train_op, cost],
-                    {input_data: sources_batch,
-                     targets: targets_batch,
+                    {input_data: source_batch,
+                     targets: target_batch,
                      lr: learning_rate,
-                     target_sequence_length: targets_lengths,
-                 source_sequence_length: sources_lengths})
+                     target_sequence_length: target_lengths,
+                    source_sequence_length: source_lengths})
 
                 # Debug message updating us on the status of the training
                 if batch_i % display_step == 0 and batch_i > 0:
-                    jj += 1
+
                     # Calculate validation cost
                     validation_loss = sess.run(
                         [cost],
-                        {input_data: sources_batch,
-                         targets: targets_batch,
+                        {input_data: testing_source_batch,
+                         targets: testing_target_batch,
                          lr: learning_rate,
-                         target_sequence_length: targets_lengths,
-                         source_sequence_length: sources_lengths})
+                         target_sequence_length: testing_target_lengths,
+                         source_sequence_length: testing_source_lengths})
 
                     print('Epoch {:>3}/{} Batch {:>4}/{} - Loss: {:>6.3f}  - Validation loss: {:>6.3f}'
                           .format(epoch_i,

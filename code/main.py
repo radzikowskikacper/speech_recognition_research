@@ -1,5 +1,5 @@
 #from data_handler.handler import handler
-import os
+import os, sys
 #from testing import demo
 
 #h = handler()
@@ -22,7 +22,7 @@ if __name__ == '__main__':
     #rajs_net.train('../data/umeerj/ume-erj/')
 
     from training.normal_s2s_encdec import s2s_encdec
-    s2s_encdec.demo()
+    s2s_encdec.demo(sys.argv[1:])
     #from training.normal_s2s_encdec import original
     #from training.normal_ctc import ctc_tensorflow_example
 

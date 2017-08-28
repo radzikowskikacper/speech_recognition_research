@@ -3,17 +3,6 @@ from tensorflow.python.layers.core import Dense
 from data_handler.loaders import tf_loader
 from random import shuffle
 
-batch_size = 16
-# Number of Epochs
-epochs = 60
-# RNN Size
-rnn_size = 25
-# Number of Layers
-num_layers = 2
-# Learning Rate
-learning_rate = 0.001
-embedding_size = 15
-
 def get_model_inputs(number_of_features):
     input_data = tf.placeholder(tf.float32, [None, None, number_of_features], name='input')
     targets = tf.placeholder(tf.int32, [None, None], name='targets')
@@ -51,7 +40,7 @@ def process_decoder_input(target_data, vocab_to_int, batch_size):
     return dec_input
 
 def create_decoder(char_to_int, embedding_size, num_layers, rnn_size, target_sequence_length, max_target_sequence_length,
-                   input_data_encoder_state, input_data_target):
+                   input_data_encoder_state, input_data_target, batch_size):
     # 1. Decoder Embedding
     target_vocab_size = len(char_to_int)
     embeddings = tf.Variable(tf.random_uniform([target_vocab_size, embedding_size]))
@@ -109,7 +98,7 @@ def create_decoder(char_to_int, embedding_size, num_layers, rnn_size, target_seq
 
     return training_decoder_output, inference_decoder_output
 
-def create_model(input_data, targets, lr, target_sequence_length, max_target_sequence_length, rnn_size, num_layers, char_to_int, source_sequence_length):
+def create_model(input_data, targets, lr, target_sequence_length, max_target_sequence_length, rnn_size, num_layers, char_to_int, source_sequence_length, batch_size, embedding_size):
     # Pass the input data through the encoder. We'll ignore the encoder output, but use the state
     _, enc_state = create_encoder(input_data, rnn_size, num_layers, source_sequence_length)
 
@@ -124,12 +113,23 @@ def create_model(input_data, targets, lr, target_sequence_length, max_target_seq
                                                                        target_sequence_length,
                                                                        max_target_sequence_length,
                                                                        enc_state,
-                                                                       dec_input)
+                                                                       dec_input, batch_size)
 
     return training_decoder_output, inference_decoder_output
 
-def demo():
-    data = tf_loader.load_data_from_file('data2.dat', 20, 10000)#tf_loader.load_data('../data/umeerj/ume-erj/')
+def demo(arguments):
+    batch_size = int(arguments[0])
+    # Number of Epochs
+    epochs = int(arguments[1])
+    # RNN Size
+    rnn_size = int(arguments[2])
+    # Number of Layers
+    num_layers = int(arguments[3])
+    # Learning Rate
+    learning_rate = float(arguments[4])
+    embedding_size = int(arguments[5])
+
+    data = tf_loader.load_data_from_file('data2.dat', 20, 70090)#tf_loader.load_data('../data/umeerj/ume-erj/')
     alphabet = tf_loader.get_alphabet(data)
     tokens = ['<PAD>', '<UNK>', '<GO>', '<EOS>']
     int_to_char = {i : char for i, char in enumerate(tokens + alphabet)}
@@ -154,7 +154,8 @@ def demo():
                                                                           target_sequence_length,
                                                                           max_target_sequence_length,
                                                                           rnn_size,
-                                                                          num_layers, char_to_int, source_sequence_length)
+                                                                          num_layers, char_to_int, source_sequence_length,
+                                                                         batch_size, embedding_size)
 
         # Create tensors for the training logits and inference logits
         training_logits = tf.identity(training_decoder_output[0].rnn_output, 'logits')

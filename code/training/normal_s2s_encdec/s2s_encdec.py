@@ -117,19 +117,7 @@ def create_model(input_data, targets, lr, target_sequence_length, max_target_seq
 
     return training_decoder_output, inference_decoder_output
 
-def demo():#arguments):
-    data = tf_loader.load_data('../data/umeerj/ume-erj/')
-    alphabet = tf_loader.get_alphabet(data)
-    tokens = ['<PAD>', '<UNK>', '<GO>', '<EOS>']
-    int_to_char = {i : char for i, char in enumerate(tokens + alphabet)}
-    char_to_int = {char : i for i, char in int_to_char.items()}
-    data = [(d[0], d[1], d[2], [char_to_int[char] for char in d[3]]) for d in data]
-    #data = tf_loader.pad_data(data, char_to_int)
-    print(len(data))
-    tf_loader.save_data_to_file(data, 'data3.dat')
-    return
-
-
+def demo(arguments):
     batch_size = int(arguments[0])
     # Number of Epochs
     epochs = int(arguments[1])
@@ -144,7 +132,7 @@ def demo():#arguments):
     samples = int(arguments[7])
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 
-    data = tf_loader.load_data_from_file('data2.dat', 20, samples)#tf_loader.load_data('../data/umeerj/ume-erj/')
+    data = tf_loader.load_data_from_file('data3.dat', 20, samples)#tf_loader.load_data('../data/umeerj/ume-erj/')
     alphabet = tf_loader.get_alphabet(data)
     tokens = ['<PAD>', '<UNK>', '<GO>', '<EOS>']
     int_to_char = {i : char for i, char in enumerate(tokens + alphabet)}

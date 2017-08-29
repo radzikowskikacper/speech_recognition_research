@@ -140,9 +140,11 @@ def demo(arguments):
     tokens = ['<PAD>', '<UNK>', '<GO>', '<EOS>']
     int_to_char = {i : char for i, char in enumerate(tokens + alphabet)}
     char_to_int = {char : i for i, char in int_to_char.items()}
+
     data = [(d[0], d[1], d[2], [char_to_int[char] for char in d[3].lower()]) for d in data]
-    print(data[0][1].shape[1])
+    #data = tf_loader.normalize_data(data)
     #data = tf_loader.pad_data(data, char_to_int)
+    print(data[0][1].shape[1])
     #tf_loader.save_data_to_file(data, 'data4.dat')
     print(len(data))
     print(char_to_int)
@@ -193,7 +195,7 @@ def demo(arguments):
     checkpoint = "../data/best_model.ckpt"
 
     #shuffle(data)
-    training_data = data[:int(0.8 * len(data))]
+    training_data = data#[:int(0.8 * len(data))]
     testing_data = data[int(0.8 * len(data)):]
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
@@ -216,12 +218,13 @@ def demo(arguments):
                     source_sequence_length: source_lengths})
 
                 # Debug message updating us on the status of the training
-                if batch_i % display_step == 0 and batch_i > 0:
+                if batch_i % display_step == 0:# and batch_i > 0:
                     accs1 = []
                     accs2 = []
                     val_losses = []
-                    for testing_source_batch, testing_target_batch, testing_source_lengths, testing_target_lengths in tf_loader.batch_generator(
-                        testing_data, batch_size, char_to_int, 'testing'):
+
+                    for j, (testing_source_batch, testing_target_batch, testing_source_lengths, testing_target_lengths) in enumerate(tf_loader.batch_generator(
+                        training_data, batch_size, char_to_int, 'testing')):
                         validation_loss, validation_accuracy = sess.run(
                             [cost, accuracy],
                             {input_data: testing_source_batch,
@@ -263,14 +266,14 @@ def demo(arguments):
         source_sequence_length = loaded_graph.get_tensor_by_name('source_sequence_length:0')
         target_sequence_length = loaded_graph.get_tensor_by_name('target_sequence_length:0')
 
-        for j in range(1):
+        for j in range(2):
             # Multiply by batch_size to match the model's input parameters
-            #answer_logits = sess.run(logits, {input_data: [data[j][1]] * batch_size,
-            #                                  target_sequence_length: [3] * batch_size,
-            #                                  source_sequence_length: [66] * batch_size})[0]
-            print(data[j][0])
-            print(data[j][1])
-            print(data[j][2])
-            print(data[j][3])
-            #print('  Word Ids:       {}'.format([i for i in answer_logits if i != char_to_int["<PAD>"]]))
-            #print('  Response Words: {}'.format(" ".join([int_to_char[i] for i in answer_logits if i != char_to_int["<PAD>"]])))
+            answer_logits = sess.run(logits, {input_data: [training_data[j][1]] * batch_size,
+                                              target_sequence_length: [1000] * batch_size,
+                                              source_sequence_length: [100] * batch_size})[0]
+            print(training_data[j][0])
+            print(training_data[j][1].shape)
+            print(training_data[j][2])
+            print(training_data[j][3])
+            print('  Word Ids:       {}'.format([i for i in answer_logits if i != char_to_int["<PAD>"]]))
+            print('  Response Words: {}'.format(" ".join([int_to_char[i] for i in answer_logits if i != char_to_int["<PAD>"]])))

@@ -7,6 +7,12 @@ def get_alphabet(data):
     alphabet = sorted(list(set([c for _, _, text, _, in data for c in text.lower()])))
     return alphabet
 
+def normalize_data(data):
+    mx = np.max([np.max(np.array(d[1])) for d in data])
+    mn = np.min([np.min(np.array(d[1])) for d in data])
+    dt2 = [(d[0], (np.array(d[1]) - mn) / (mx - mn), d[2], d[3]) for i, d in enumerate(data)]
+    return dt2
+
 def pad_data(data, char_to_int):
     samples_max_length = max([d[1].shape[0] for d in data])
     labels_max_length = max([len(d[2]) for d in data])

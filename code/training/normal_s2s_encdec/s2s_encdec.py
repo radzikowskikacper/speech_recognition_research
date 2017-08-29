@@ -118,6 +118,7 @@ def create_model(input_data, targets, lr, target_sequence_length, max_target_seq
     return training_decoder_output, inference_decoder_output
 
 def demo(arguments):
+    #'''
     batch_size = int(arguments[0])
     # Number of Epochs
     epochs = int(arguments[1])
@@ -128,24 +129,24 @@ def demo(arguments):
     # Learning Rate
     learning_rate = float(arguments[4])
     embedding_size = int(arguments[5])
-    os.environ["CUDA_VISIBLE_DEVICES"] = arguments[6]
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(arguments[6])
     samples = int(arguments[7])
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
     display_step = int(arguments[8])  # Check training loss after every 20 batches
-
-    #data = tf_loader.load_data_from_file('data3.dat', 20, samples)#tf_loader.load_data('../data/umeerj/ume-erj/')
-    data = tf_loader.load_data('../data/umeerj/ume-erj/')
+    #'''
+    data = tf_loader.load_data_from_file('data4.dat', 20, samples)#tf_loader.load_data('../data/umeerj/ume-erj/')
+    #data = tf_loader.load_data('../data/umeerj/ume-erj/')
     alphabet = tf_loader.get_alphabet(data)
     tokens = ['<PAD>', '<UNK>', '<GO>', '<EOS>']
     int_to_char = {i : char for i, char in enumerate(tokens + alphabet)}
     char_to_int = {char : i for i, char in int_to_char.items()}
-    #data = [(d[0], d[1], d[2], [char_to_int[char] for char in d[3]]) for d in data]
+    data = [(d[0], d[1], d[2], [char_to_int[char] for char in d[3].lower()]) for d in data]
+    print(data[0][1].shape[1])
     #data = tf_loader.pad_data(data, char_to_int)
-    tf_loader.save_data_to_file(data, 'data4.dat')
+    #tf_loader.save_data_to_file(data, 'data4.dat')
     print(len(data))
     print(char_to_int)
-    print(int_to_char)
-    return
+    #return
 
     # Build the graph
     tf.logging.set_verbosity(tf.logging.ERROR)
@@ -189,7 +190,7 @@ def demo(arguments):
             capped_gradients = [(tf.clip_by_value(grad, -5., 5.), var) for grad, var in gradients if grad is not None]
             train_op = optimizer.apply_gradients(capped_gradients)
 
-    checkpoint = "best_model.ckpt"
+    checkpoint = "../data/best_model.ckpt"
 
     #shuffle(data)
     training_data = data[:int(0.8 * len(data))]
@@ -205,7 +206,6 @@ def demo(arguments):
             for batch_i, (source_batch, target_batch, source_lengths, target_lengths) in enumerate(
                     tf_loader.batch_generator(training_data, batch_size, char_to_int)):
                 tstart = time.time()
-
                 # Training step
                 _, loss, training_accuracy = sess.run(
                     [train_op, cost, accuracy],
@@ -250,7 +250,7 @@ def demo(arguments):
         saver.save(sess, checkpoint)
         print('Model Trained and Saved')
 
-    checkpoint = "./best_model.ckpt"
+    checkpoint = "../data/best_model.ckpt"
 
     loaded_graph = tf.Graph()
     with tf.Session(graph=loaded_graph, config=config) as sess:

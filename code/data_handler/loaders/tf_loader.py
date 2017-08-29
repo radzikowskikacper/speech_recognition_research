@@ -54,13 +54,16 @@ def load_data(path):
     i = 0
     j = 0
     for root, dirs, files in os.walk(data_dir):
-        for file in files:
+        dirs.sort()
+        for file in sorted(files):
             if i == 25:
             #    print(i)
                 break
             data.append((os.path.join(root, file), 0,#np.array(extraction.get_features_vector(os.path.join(root, file))).T,
                          fname_to_text[file[:-4]], fname_to_text[file[:-4]].lower()))
             i += 1
+
+    #data = sorted(data, key = lambda x: x[0])
 
     to_delete = []
     lck = Lock()
@@ -109,6 +112,7 @@ def load_data_from_file(path, num_features, samples):
     with open(path) as f:
         for _ in range(samples):
             fname = f.readline().strip()
+            print(fname)
             nums = []
             for i in range(num_features):
                 nums.append(np.array([float(n) for n in f.readline().split()]))

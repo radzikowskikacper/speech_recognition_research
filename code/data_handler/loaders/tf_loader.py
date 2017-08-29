@@ -56,9 +56,9 @@ def load_data(path):
     for root, dirs, files in os.walk(data_dir):
         dirs.sort()
         for file in sorted(files):
-            if i == 25:
+            #if i == 25:
             #    print(i)
-                break
+            #    break
             data.append((os.path.join(root, file), 0,#np.array(extraction.get_features_vector(os.path.join(root, file))).T,
                          fname_to_text[file[:-4]], fname_to_text[file[:-4]].lower()))
             i += 1
@@ -105,18 +105,17 @@ def save_data_to_file(data, path):
             for feat in d[1].T:
                 f.write(' '.join([str(f) for f in feat]) + '\n')
             f.write(d[2] + '\n')
-            f.write(' '.join([str(f) for f in d[3]]) + '\n')
+            #f.write(' '.join([str(f) for f in d[3]]) + '\n')
 
 def load_data_from_file(path, num_features, samples):
     data = []
     with open(path) as f:
         for _ in range(samples):
             fname = f.readline().strip()
-            print(fname)
             nums = []
             for i in range(num_features):
                 nums.append(np.array([float(n) for n in f.readline().split()]))
-            original_text = f.readline()
-            text = f.readline()
-            data.append((fname, np.array(nums).T, original_text.strip(), [int(t) for t in text.split()]))
+            original_text = f.readline().strip()
+            #text = f.readline()
+            data.append((fname, np.array(nums).T, original_text, original_text))#, [int(t) for t in text.split()]))
     return data

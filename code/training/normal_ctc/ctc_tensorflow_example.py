@@ -29,12 +29,12 @@ batch_size = 2
 initial_learning_rate = 1e-2
 momentum = 0.9
 
-num_examples = 1
+num_examples = 10
 num_batches_per_epoch = int(num_examples/batch_size)
 
 # Loading the data
 
-data = tf_loader.load_data_from_file('../data/umeerj/data.dat', num_features, 10)
+data = tf_loader.load_data_from_file('../data/umeerj/data.dat', num_features, num_examples)
 samples = [d[1] for d in data]
 samples = tf_loader.pad_data2(samples, 0)
 originals = [d[2] for d in data]

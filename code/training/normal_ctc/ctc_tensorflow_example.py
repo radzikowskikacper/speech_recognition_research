@@ -34,48 +34,19 @@ num_batches_per_epoch = int(num_examples/batch_size)
 
 # Loading the data
 
-audio_filename = '../data/umeerj/ume-erj/wav/JE/DOS/F01/S6_001.wav'#maybe_download('LDC93S1.wav', 93638)
-target_filename = '../data/ctc_data/sample.txt'#maybe_download('LDC93S1.txt', 62)
+data = tf_loader.load_data_from_file('../data/umeerj/data.dat', num_features, 2)
+samples = tf_loader.pad_data2([d[1] for d in data], 0)
+samples = (samples - np.mean(samples)) / np.std(samples)
 
-#fs, audio = wav.read(audio_filename)
-#inputs = mfcc(audio, samplerate=fs)
-
-inputs = extraction.get_features_vector(audio_filename).T
-# Tranform in 3D array
-train_inputs = np.asarray(inputs[np.newaxis, :])
-train_inputs2 = extraction.get_features_vector('../data/umeerj/ume-erj/wav/JE/DOS/F01/S6_002.wav').T
-train_inputs = np.pad(train_inputs, ((0, 0), (0, 10), (0, 0)), mode='constant', constant_values=0)
-train_inputs = (train_inputs - np.mean(train_inputs))/np.std(train_inputs)
-train_inputs2 = np.asarray(train_inputs2[np.newaxis, :])
-train_inputs2 = (train_inputs2 - np.mean(train_inputs2))/np.std(train_inputs2)
-train_inputs = np.vstack((train_inputs, train_inputs2))
-train_seq_len = [train_inputs.shape[1]] * train_inputs.shape[0]
-
-# Readings targets
-with open(target_filename, 'r') as f:
-
-    #Only the last line is necessary
-    lines = f.readlines()
-
-    # Get only the words between [a-z] and replace period for none
-    originals = [' '.join(line.strip().lower().split(' ')).replace('.', '').replace('-', '') for line in lines]
-    targets = [original.replace(' ', '  ') for original in originals]
-    targets = [target.split(' ') for target in targets]
-
-# Adding blank label
+targets = [d[2] for d in data]
+targets = [' '.join(t.strip().lower().split(' ')).replace('.', '').replace('-', '') for t in targets]
+targets = [target.replace(' ', '  ') for target in targets]
+targets = [target.split(' ') for target in targets]
 targets = [np.hstack([SPACE_TOKEN if x == '' else list(x) for x in target]) for target in targets]
-
-# Transform char into index
-targetsn = [np.asarray([SPACE_INDEX if x == SPACE_TOKEN else ord(x) - FIRST_INDEX
-                      for x in target]) for target in targets]
-
-# Creating sparse representation to feed the placeholder
-train_targets = sparse_tuple_from(targetsn)
-
-# We don't have a validation dataset :(
-val_inputs, val_targets, val_seq_len = train_inputs, train_targets, \
-                                       train_seq_len
-
+targets = [np.asarray([SPACE_INDEX if x == SPACE_TOKEN else ord(x) - FIRST_INDEX for x in target]) for target in targets]
+targets = sparse_tuple_from(targets)
+samples_len = [s.shape[0] for s in samples]
+#batch_generator = tf_loader.batch_generator(samples, targets, 2)
 
 # THE MAIN CODE!
 
@@ -155,21 +126,21 @@ with tf.Session(graph=graph, config=config) as session:
         train_cost = train_ler = 0
         start = time.time()
 
-        for batch in range(num_batches_per_epoch):
-            feed = {inputs: train_inputs,
-                    targets: train_targets,
-                    seq_len: train_seq_len}
+        #for train_inputs, train_targets, train_seq_len, _ in [(samples, targets, samples_len, 4)]:
+        feed = {inputs: samples,
+                    targets: targets,
+                    seq_len: samples_len}
 
-            batch_cost, _ = session.run([cost, optimizer], feed)
-            train_cost += batch_cost*batch_size
-            train_ler += session.run(ler, feed_dict=feed)*batch_size
+        batch_cost, _ = session.run([cost, optimizer], feed)
+        train_cost += batch_cost*batch_size
+        train_ler += session.run(ler, feed_dict=feed)*batch_size
 
         train_cost /= num_examples
         train_ler /= num_examples
 
-        val_feed = {inputs: val_inputs,
-                    targets: val_targets,
-                    seq_len: val_seq_len}
+        val_feed = feed#{inputs: train_inputs,
+                    #targets: train_targets,
+                    #seq_len: train_seq_len}
 
         val_cost, val_ler = session.run([cost, ler], feed_dict=val_feed)
 

@@ -29,32 +29,29 @@ def pad_data(data, char_to_int):
 
     return data
 
-def pad_data2(data, char_to_int):
-    samples_max_length = max([d[1].shape[0] for d in data])
-    labels_max_length = max([len(d[2]) for d in data])
+def pad_data2(data, padder):
+    max_length = max([d.shape[0] for d in data])
 
     for i in range(len(data)):
-        data[i] = (data[i][0],
-                   np.pad(data[i][1], ((0, samples_max_length - data[i][1].shape[0]), (0, 0)), mode='constant', constant_values=0),
-                   data[i][2],
-                   data[i][3] + [char_to_int['<PAD>']] * (labels_max_length - len(data[i][3])))
+        data[i] = np.pad(data[i], ((0, max_length - data[i].shape[0]), (0, 0)), mode='constant', constant_values=padder)
 
     return data
 
 batches_saves = defaultdict(list)
 
-def batch_generator(data, batch_size, char_to_int, mode = 'training'):
+def batch_generator(samples, targets, batch_size, mode = 'training'):
     if mode in batches_saves:
         for line in batches_saves[mode]:
             yield line
     else:
-        for batch_i in range(len(data) // batch_size):
+        for batch_i in range(len(samples) // batch_size):
             batch_start = batch_size * batch_i
-            batch = pad_data(data[batch_start:batch_start + batch_size], char_to_int)
-            samples = [b[1] for b in batch]
-            labels = [b[3] for b in batch]
+            samples = samples[batch_start:batch_start + batch_size]
+#            samples = pad_data2(samples, 0)
+            labels = targets[batch_start:batch_start + batch_size]
+#            labels = pad_data2(labels, 0)
             samples_lengths = [s.shape[0] for s in samples]
-            labels_lengths = [len(l) for l in labels]
+            labels_lengths = [l.shape[0] for l in labels]
             batches_saves[mode].append((samples, labels, samples_lengths, labels_lengths))
             yield samples, labels, samples_lengths, labels_lengths
 

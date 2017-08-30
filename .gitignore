@@ -2,3 +2,5 @@ data/ume-erj
 data/kaldi*
 data-berp
 data/umeerj
+
+data/*data*

@@ -39,7 +39,7 @@ def pad_data2(data, padder):
 
 batches_saves = defaultdict(list)
 
-def batch_generator(samples, targets, batch_size, mode = 'training'):
+def batch_generator(samples, targets, batch_size, target_parser = None, mode = 'training'):
     if mode in batches_saves:
         for line in batches_saves[mode]:
             yield line
@@ -52,6 +52,8 @@ def batch_generator(samples, targets, batch_size, mode = 'training'):
 #            labels = pad_data2(labels, 0)
             samples_lengths = [s.shape[0] for s in rsamples]
             labels_lengths = [l.shape[0] for l in labels]
+            if target_parser:
+                labels = target_parser(labels)
             batches_saves[mode].append((rsamples, labels, samples_lengths, labels_lengths))
             yield rsamples, labels, samples_lengths, labels_lengths
 

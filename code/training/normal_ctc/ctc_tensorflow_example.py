@@ -134,9 +134,9 @@ with tf.Session(graph=graph, config=config) as session:
         train_cost = train_ler = 0
         start = time.time()
 
-        for train_inputs, train_targets, train_seq_len, _ in tf_loader.batch_generator(sampless, targetss, batch_size):#[(samples1, targets1, samples_len, 4)]:
+        for train_inputs, train_targets, train_seq_len, _ in tf_loader.batch_generator(sampless, targetss, batch_size, target_parser = sparse_tuple_from):#[(samples1, targets1, samples_len, 4)]:
             feed = {inputs: train_inputs,
-                    targets: sparse_tuple_from(train_targets),
+                    targets: train_targets,
                     seq_len: train_seq_len}
             batch_cost, _ = session.run([cost, optimizer], feed)
             train_cost += batch_cost*batch_size

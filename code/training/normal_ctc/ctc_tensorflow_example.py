@@ -34,19 +34,22 @@ num_batches_per_epoch = int(num_examples/batch_size)
 
 # Loading the data
 
-data = tf_loader.load_data_from_file('../data/umeerj/data.dat', num_features, 2)
+data = tf_loader.load_data_from_file('../data/umeerj/data.dat', num_features, 70090)
 samples = tf_loader.pad_data2([d[1] for d in data], 0)
+originals = [d[2] for d in data]
+data = None
+
 samples = (samples - np.mean(samples)) / np.std(samples)
 
-targets = [d[2] for d in data]
-targets = [' '.join(t.strip().lower().split(' ')).replace('.', '').replace('-', '') for t in targets]
+targets = [' '.join(t.strip().lower().split(' ')).replace('.', '').replace('-', '') for t in originals  ]
 targets = [target.replace(' ', '  ') for target in targets]
 targets = [target.split(' ') for target in targets]
 targets = [np.hstack([SPACE_TOKEN if x == '' else list(x) for x in target]) for target in targets]
 targets = [np.asarray([SPACE_INDEX if x == SPACE_TOKEN else ord(x) - FIRST_INDEX for x in target]) for target in targets]
-targets = sparse_tuple_from(targets)
+targets1 = sparse_tuple_from(targets)
+
 samples_len = [s.shape[0] for s in samples]
-#batch_generator = tf_loader.batch_generator(samples, targets, 2)
+batch_generator = tf_loader.batch_generator(samples, targets, 16)
 
 # THE MAIN CODE!
 
@@ -126,14 +129,13 @@ with tf.Session(graph=graph, config=config) as session:
         train_cost = train_ler = 0
         start = time.time()
 
-        #for train_inputs, train_targets, train_seq_len, _ in [(samples, targets, samples_len, 4)]:
-        feed = {inputs: samples,
-                    targets: targets,
-                    seq_len: samples_len}
-
-        batch_cost, _ = session.run([cost, optimizer], feed)
-        train_cost += batch_cost*batch_size
-        train_ler += session.run(ler, feed_dict=feed)*batch_size
+        for train_inputs, train_targets, train_seq_len, _ in [(samples, targets1, samples_len, 4)]:
+            feed = {inputs: train_inputs,
+                    targets: train_targets,
+                    seq_len: train_seq_len}
+            batch_cost, _ = session.run([cost, optimizer], feed)
+            train_cost += batch_cost*batch_size
+            train_ler += session.run(ler, feed_dict=feed)*batch_size
 
         train_cost /= num_examples
         train_ler /= num_examples

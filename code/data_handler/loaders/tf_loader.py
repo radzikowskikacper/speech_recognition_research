@@ -7,6 +7,10 @@ def get_alphabet(data):
     alphabet = sorted(list(set([c for _, _, text, _, in data for c in text.lower()])))
     return alphabet
 
+def get_alphabet2(data):
+    alphabet = sorted(list(set([c for text in data for c in text.lower()])))
+    return alphabet
+
 def normalize_data(data):
     mx = np.max([np.max(np.array(d[1])) for d in data])
     mn = np.min([np.min(np.array(d[1])) for d in data])
@@ -14,6 +18,18 @@ def normalize_data(data):
     return dt2
 
 def pad_data(data, char_to_int):
+    samples_max_length = max([d[1].shape[0] for d in data])
+    labels_max_length = max([len(d[2]) for d in data])
+
+    for i in range(len(data)):
+        data[i] = (data[i][0],
+                   np.pad(data[i][1], ((0, samples_max_length - data[i][1].shape[0]), (0, 0)), mode='constant', constant_values=0),
+                   data[i][2],
+                   data[i][3] + [char_to_int['<PAD>']] * (labels_max_length - len(data[i][3])))
+
+    return data
+
+def pad_data2(data, char_to_int):
     samples_max_length = max([d[1].shape[0] for d in data])
     labels_max_length = max([len(d[2]) for d in data])
 
@@ -116,6 +132,7 @@ def save_data_to_file(data, path):
 def load_data_from_file(path, num_features, samples):
     data = []
     with open(path) as f:
+        i = 0
         for _ in range(samples):
             fname = f.readline().strip()
             nums = []

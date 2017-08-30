@@ -1,22 +1,13 @@
-#  Compatibility imports
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import time
-
 import tensorflow as tf
 import scipy.io.wavfile as wav
 import numpy as np
 
 from six.moves import xrange as range
+from python_speech_features import mfcc
 
-try:
-    from python_speech_features import mfcc
-except ImportError:
-    print("Failed to import python_speech_features.\n Try pip install python_speech_features.")
-    raise ImportError
-
+from feature_extraction import extraction
+from data_handler.loaders import tf_loader
 from .utils import maybe_download as maybe_download
 from .utils import sparse_tuple_from as sparse_tuple_from
 
@@ -26,12 +17,12 @@ SPACE_INDEX = 0
 FIRST_INDEX = ord('a') - 1  # 0 is reserved to space
 
 # Some configs
-num_features = 13
+num_features = 20
 # Accounting the 0th indice +  space + blank label = 28 characters
 num_classes = ord('z') - ord('a') + 1 + 1 + 1
 
 # Hyper-parameters
-num_epochs = 200
+num_epochs = 1000
 num_hidden = 50
 num_layers = 1
 batch_size = 1
@@ -44,36 +35,42 @@ num_batches_per_epoch = int(num_examples/batch_size)
 # Loading the data
 
 audio_filename = '../data/umeerj/ume-erj/wav/JE/DOS/F01/S6_001.wav'#maybe_download('LDC93S1.wav', 93638)
-target_filename = 'sample.txt'#maybe_download('LDC93S1.txt', 62)
+target_filename = '../data/ctc_data/sample.txt'#maybe_download('LDC93S1.txt', 62)
 
-fs, audio = wav.read(audio_filename)
+#fs, audio = wav.read(audio_filename)
+#inputs = mfcc(audio, samplerate=fs)
 
-inputs = mfcc(audio, samplerate=fs)
+inputs = extraction.get_features_vector(audio_filename).T
 # Tranform in 3D array
 train_inputs = np.asarray(inputs[np.newaxis, :])
+train_inputs2 = extraction.get_features_vector('../data/umeerj/ume-erj/wav/JE/DOS/F01/S6_002.wav').T
+train_inputs = np.pad(train_inputs, ((0, 0), (0, 10), (0, 0)), mode='constant', constant_values=0)
 train_inputs = (train_inputs - np.mean(train_inputs))/np.std(train_inputs)
-train_seq_len = [train_inputs.shape[1]]
+train_inputs2 = np.asarray(train_inputs2[np.newaxis, :])
+train_inputs2 = (train_inputs2 - np.mean(train_inputs2))/np.std(train_inputs2)
+train_inputs = np.vstack((train_inputs, train_inputs2))
+train_seq_len = [train_inputs.shape[1]] * train_inputs.shape[0]
 
 # Readings targets
 with open(target_filename, 'r') as f:
 
     #Only the last line is necessary
-    line = f.readlines()[-1]
+    lines = f.readlines()
 
     # Get only the words between [a-z] and replace period for none
-    original = ' '.join(line.strip().lower().split(' ')).replace('.', '')
-    targets = original.replace(' ', '  ')
-    targets = targets.split(' ')
+    originals = [' '.join(line.strip().lower().split(' ')).replace('.', '').replace('-', '') for line in lines]
+    targets = [original.replace(' ', '  ') for original in originals]
+    targets = [target.split(' ') for target in targets]
 
 # Adding blank label
-targets = np.hstack([SPACE_TOKEN if x == '' else list(x) for x in targets])
+targets = [np.hstack([SPACE_TOKEN if x == '' else list(x) for x in target]) for target in targets]
 
 # Transform char into index
-targets = np.asarray([SPACE_INDEX if x == SPACE_TOKEN else ord(x) - FIRST_INDEX
-                      for x in targets])
+targetsn = [np.asarray([SPACE_INDEX if x == SPACE_TOKEN else ord(x) - FIRST_INDEX
+                      for x in target]) for target in targets]
 
 # Creating sparse representation to feed the placeholder
-train_targets = sparse_tuple_from([targets])
+train_targets = sparse_tuple_from(targetsn)
 
 # We don't have a validation dataset :(
 val_inputs, val_targets, val_seq_len = train_inputs, train_targets, \
@@ -87,14 +84,14 @@ with graph.as_default():
     # e.g: log filter bank or MFCC features
     # Has size [batch_size, max_stepsize, num_features], but the
     # batch_size and max_stepsize can vary along each step
-    inputs = tf.placeholder(tf.float32, [None, None, num_features])
+    inputs = tf.placeholder(tf.float32, [None, None, num_features], name='inputs')
 
     # Here we use sparse_placeholder that will generate a
     # SparseTensor required by ctc_loss op.
-    targets = tf.sparse_placeholder(tf.int32)
+    targets = tf.sparse_placeholder(tf.int32, name='spars')
 
     # 1d array of size [batch_size]
-    seq_len = tf.placeholder(tf.int32, [None])
+    seq_len = tf.placeholder(tf.int32, [None], name='seq_len')
 
     # Defining the cell
     # Can be:
@@ -148,7 +145,9 @@ with graph.as_default():
     ler = tf.reduce_mean(tf.edit_distance(tf.cast(decoded[0], tf.int32),
                                           targets))
 
-with tf.Session(graph=graph) as session:
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True
+with tf.Session(graph=graph, config=config) as session:
     # Initializate the weights and biases
     tf.global_variables_initializer().run()
 
@@ -157,7 +156,6 @@ with tf.Session(graph=graph) as session:
         start = time.time()
 
         for batch in range(num_batches_per_epoch):
-
             feed = {inputs: train_inputs,
                     targets: train_targets,
                     seq_len: train_seq_len}
@@ -179,12 +177,13 @@ with tf.Session(graph=graph) as session:
         print(log.format(curr_epoch+1, num_epochs, train_cost, train_ler,
                          val_cost, val_ler, time.time() - start))
     # Decoding
-    d = session.run(decoded[0], feed_dict=feed)
+    d = session.run(decoded[0], feed_dict={inputs: train_inputs, seq_len : train_seq_len})
+    print(d[1])
     str_decoded = ''.join([chr(x) for x in np.asarray(d[1]) + FIRST_INDEX])
     # Replacing blank label to none
     str_decoded = str_decoded.replace(chr(ord('z') + 1), '')
     # Replacing space label to space
     str_decoded = str_decoded.replace(chr(ord('a') - 1), ' ')
 
-    print('Original:\n%s' % original)
-    print('Decoded:\n%s' % str_decoded)
+    print('Original:\n{}'.format(originals))
+    print('Decoded:\n{}'.format(str_decoded))

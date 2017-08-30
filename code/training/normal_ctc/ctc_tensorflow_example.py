@@ -35,15 +35,15 @@ num_batches_per_epoch = int(num_examples/batch_size)
 # Loading the data
 
 data = tf_loader.load_data_from_file('../data/umeerj/data.dat', num_features, num_examples)
-samples = [d[1] for d in data]
-samples = tf_loader.pad_data2(samples, 0)
+sampless = [d[1] for d in data]
+#samples = tf_loader.pad_data2(samples, 0)
 originals = [d[2] for d in data]
 data = None
 
-samples_sum = np.sum([np.sum(s) for s in samples])
-samples_mean = samples_sum / np.sum([s.size for s in samples])
+samples_min = np.min([np.min(s) for s in sampless])
+samples_max = np.max([np.max(s) for s in sampless])
 
-sampless = (samples - np.mean(samples)) / np.std(samples)
+#sampless = (samples - np.mean(samples)) / np.std(samples)
 
 targets = [' '.join(t.strip().lower().split(' '))
                .replace('.', '').replace('-', '').replace("'", '').replace(':', '').replace(',', '').replace('?', '').replace('!', '')
@@ -134,7 +134,8 @@ with tf.Session(graph=graph, config=config) as session:
         train_cost = train_ler = 0
         start = time.time()
 
-        for train_inputs, train_targets, train_seq_len, _ in tf_loader.batch_generator(sampless, targetss, batch_size, target_parser = sparse_tuple_from):#[(samples1, targets1, samples_len, 4)]:
+        for train_inputs, train_targets, train_seq_len, _ in \
+                tf_loader.batch_generator(sampless, targetss, batch_size, samples_min, samples_max, target_parser = sparse_tuple_from):#[(samples1, targets1, samples_len, 4)]:
             feed = {inputs: train_inputs,
                     targets: train_targets,
                     seq_len: train_seq_len}

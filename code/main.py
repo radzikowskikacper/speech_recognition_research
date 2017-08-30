@@ -9,6 +9,7 @@ if __name__ == '__main__':
     arguments = sys.argv
     if len(arguments) > 1:
         os.environ["CUDA_VISIBLE_DEVICES"] = str(arguments[1])
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 
     '''
     from feature_extraction import speaker_dependency

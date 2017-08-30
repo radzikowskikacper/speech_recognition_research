@@ -23,8 +23,8 @@ num_classes = ord('z') - ord('a') + 1 + 1 + 1
 
 # Hyper-parameters
 num_epochs = 1000
-num_hidden = 50
-num_layers = 1
+num_hidden = 250
+num_layers = 3
 batch_size = 2
 initial_learning_rate = 1e-2
 momentum = 0.9
@@ -76,11 +76,11 @@ with graph.as_default():
     # Can be:
     #   tf.nn.rnn_cell.RNNCell
     #   tf.nn.rnn_cell.GRUCell
-    cell = tf.contrib.rnn.LSTMCell(num_hidden, state_is_tuple=True)
+    def lstm_cell():
+        return tf.contrib.rnn.LSTMCell(num_hidden, state_is_tuple=True)
 
-    # Stacking rnn cells
-    stack = tf.contrib.rnn.MultiRNNCell([cell] * num_layers,
-                                        state_is_tuple=True)
+    stack = tf.contrib.rnn.MultiRNNCell(
+        [lstm_cell() for _ in range(num_layers)])
 
     # The second output is the last state and we will no use that
     outputs, _ = tf.nn.dynamic_rnn(stack, inputs, seq_len, dtype=tf.float32)

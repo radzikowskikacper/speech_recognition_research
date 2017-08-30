@@ -46,14 +46,14 @@ def batch_generator(samples, targets, batch_size, mode = 'training'):
     else:
         for batch_i in range(len(samples) // batch_size):
             batch_start = batch_size * batch_i
-            samples = samples[batch_start:batch_start + batch_size]
+            rsamples = samples[batch_start:batch_start + batch_size]
 #            samples = pad_data2(samples, 0)
             labels = targets[batch_start:batch_start + batch_size]
 #            labels = pad_data2(labels, 0)
-            samples_lengths = [s.shape[0] for s in samples]
+            samples_lengths = [s.shape[0] for s in rsamples]
             labels_lengths = [l.shape[0] for l in labels]
-            batches_saves[mode].append((samples, labels, samples_lengths, labels_lengths))
-            yield samples, labels, samples_lengths, labels_lengths
+            batches_saves[mode].append((rsamples, labels, samples_lengths, labels_lengths))
+            yield rsamples, labels, samples_lengths, labels_lengths
 
 def load_data(path):
     data_dir = os.path.join(path, 'wav', 'JE')

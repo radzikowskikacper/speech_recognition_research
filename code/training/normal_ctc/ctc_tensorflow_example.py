@@ -23,27 +23,32 @@ num_classes = ord('z') - ord('a') + 1 + 1 + 1
 
 # Hyper-parameters
 num_epochs = 1000
-num_hidden = 250
-num_layers = 3
-batch_size = 2
+num_hidden = 50
+num_layers = 1
+batch_size = 1
 initial_learning_rate = 1e-2
 momentum = 0.9
 
-num_examples = 10
+num_examples = 2
 num_batches_per_epoch = int(num_examples/batch_size)
 
 # Loading the data
 
 data = tf_loader.load_data_from_file('../data/umeerj/data.dat', num_features, num_examples)
 sampless = [d[1] for d in data]
-#samples = tf_loader.pad_data2(samples, 0)
+#sampless = tf_loader.pad_data2(sampless, 0)
 originals = [d[2] for d in data]
 data = None
 
+samples_min = np.sum([np.sum(s) for s in sampless]) / np.sum([np.size(s) for s in sampless])
 samples_min = np.min([np.min(s) for s in sampless])
+samples_max = np.sqrt(np.sum([np.sum(np.power(s - samples_min, 2)) for s in sampless]) / np.sum([np.size(s) for s in sampless]))
 samples_max = np.max([np.max(s) for s in sampless])
+#samples_mean = np.mean(sampless)
+#samples_std = np.std(sampless)
 
-#sampless = (samples - np.mean(samples)) / np.std(samples)
+#sampless = (sampless - np.mean(sampless)) / np.std(sampless)
+#sampless = (sampless - samples_min) / (samples_max - samples_min)
 
 targets = [' '.join(t.strip().lower().split(' '))
                .replace('.', '').replace('-', '').replace("'", '').replace(':', '').replace(',', '').replace('?', '').replace('!', '')

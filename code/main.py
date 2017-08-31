@@ -30,6 +30,7 @@ if __name__ == '__main__':
     #s2s_encdec.demo([2, 100, 25, 2, 0.1, 15, 0, 6, 1])#sys.argv[1:])
     #from training.normal_s2s_encdec import original
     from training.normal_ctc import ctc_tensorflow_example
+    ctc_tensorflow_example.train()
     #from training.normal_ctc import ccc
 
 

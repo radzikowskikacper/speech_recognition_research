@@ -129,26 +129,26 @@ def demo(arguments):
     # Learning Rate
     learning_rate = float(arguments[4])
     embedding_size = int(arguments[5])
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(arguments[6])
-    samples = int(arguments[7])
+    samples = int(arguments[6])
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
     display_step = int(arguments[8])  # Check training loss after every 20 batches
     #'''
-    data = tf_loader.load_data_from_file('data4.dat', 20, samples)#tf_loader.load_data('../data/umeerj/ume-erj/')
+    #data = tf_loader.load_data_from_file('data4.dat', 20, samples)#
+    data = tf_loader.load_data('../data/umeerj/ume-erj/')
     #data = tf_loader.load_data('../data/umeerj/ume-erj/')
     alphabet = tf_loader.get_alphabet(data)
     tokens = ['<PAD>', '<UNK>', '<GO>', '<EOS>']
     int_to_char = {i : char for i, char in enumerate(tokens + alphabet)}
     char_to_int = {char : i for i, char in int_to_char.items()}
 
-    data = [(d[0], d[1], d[2], [char_to_int[char] for char in d[3].lower()]) for d in data]
+    #data = [(d[0], d[1], d[2], [char_to_int[char] for char in d[3].lower()]) for d in data]
     #data = tf_loader.normalize_data(data)
     #data = tf_loader.pad_data(data, char_to_int)
     print(data[0][1].shape[1])
-    #tf_loader.save_data_to_file(data, 'data4.dat')
+    tf_loader.save_data_to_file(data, 'data_both_mfcc.dat')
     print(len(data))
     print(char_to_int)
-    #return
+    return
 
     # Build the graph
     tf.logging.set_verbosity(tf.logging.ERROR)
@@ -225,8 +225,8 @@ def demo(arguments):
 
                     for j, (testing_source_batch, testing_target_batch, testing_source_lengths, testing_target_lengths) in enumerate(tf_loader.batch_generator(
                         training_data, batch_size, char_to_int, 'testing')):
-                        validation_loss, validation_accuracy = sess.run(
-                            [cost, accuracy],
+                        validation_loss, validation_accuracy, il = sess.run(
+                            [cost, accuracy, inference_logits],
                             {input_data: testing_source_batch,
                              targets: testing_target_batch,
                              lr: learning_rate,

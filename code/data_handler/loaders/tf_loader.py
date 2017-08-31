@@ -4,7 +4,7 @@ from threading import Thread, Lock
 from collections import defaultdict
 
 def get_alphabet(data):
-    alphabet = sorted(list(set([c for _, _, text, _, in data for c in text.lower()])))
+    alphabet = sorted(list(set([c for _, _, _, text, _, in data for c in text.lower()])))
     return alphabet
 
 def get_alphabet2(data):
@@ -94,7 +94,8 @@ def load_data(path):
             if k % 200 == 0 and k > 0:
                 print('[{}] {} %'.format(id, (k - start) / (end - start) * 100))
             try:
-                data[k] = (data[k][0], np.array(extraction.get_features_vector(data[k][0])).T, data[k][2], data[k][3])
+                data[k] = (data[k][0], np.array(extraction.get_librosa_mfcc(data[k][0])).T,
+                           np.array(extraction.get_other_mfcc(data[k][0])), data[k][2], data[k][3])
             except:
                 print(data[k][0])
                 traceback.print_exc()
@@ -126,7 +127,9 @@ def save_data_to_file(data, path):
             f.write(d[0] + '\n')
             for feat in d[1].T:
                 f.write(' '.join([str(f) for f in feat]) + '\n')
-            f.write(d[2] + '\n')
+            for feat in d[2].T:
+                f.write(' '.join([str(f) for f in feat]) + '\n')
+            f.write(d[3] + '\n')
             #f.write(' '.join([str(f) for f in d[3]]) + '\n')
 
 def load_data_from_file(path, num_features, samples):

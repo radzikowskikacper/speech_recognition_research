@@ -11,68 +11,69 @@ from data_handler.loaders import tf_loader
 from .utils import maybe_download as maybe_download
 from .utils import sparse_tuple_from as sparse_tuple_from
 
-# Constants
-SPACE_TOKEN = '<space>'
-#SPACE_INDEX = 0
-#FIRST_INDEX = ord('a') - 1  # 0 is reserved to space
+# THE MAIN CODE!
+def train(arguments):
+    # Constants
+    SPACE_TOKEN = '<space>'
+    # SPACE_INDEX = 0
+    # FIRST_INDEX = ord('a') - 1  # 0 is reserved to space
 
-# Some configs
-num_features = 13
-# Accounting the 0th indice +  space + blank label = 28 characters
-num_classes = ord('z') - ord('a') + 1 + 1 + 1
+    # Some configs
+    num_features = 13
+    # Accounting the 0th indice +  space + blank label = 28 characters
+    num_classes = ord('z') - ord('a') + 1 + 1 + 1
 
-# Hyper-parameters
-num_epochs = 200
-num_hidden = 50
-num_layers = 1
-batch_size = 1
-initial_learning_rate = 1e-2
-momentum = 0.9
+    # Hyper-parameters
+    num_epochs = int(arguments[0])
+    num_hidden = int(arguments[1])
+    num_layers = int(arguments[2])
+    batch_size = int(arguments[3])
+    initial_learning_rate = float(arguments[4])
+    momentum = float(arguments[5])
+    num_examples = int(arguments[6])
 
-num_examples = 1
+    # Loading the data
 
-# Loading the data
+    data = tf_loader.load_data_from_file('../data/umeerj/data_both_mfcc.dat', [20, 13], num_examples)
+    # fs, audio = wav.read('/home/kapi/projects/research/phd/asr/data/umeerj/ume-erj/wav/JE/DOS/F01/S6_001.wav')
+    # data[0] = (data[0][0], mfcc(audio, samplerate=fs), data[0][2], data[0][3])
+    alphabet = tf_loader.get_alphabet2([d[3] for d in data])
+    int_to_char = {i: char for i, char in enumerate([SPACE_TOKEN] + alphabet)}
+    char_to_int = {char: i for i, char in int_to_char.items()}
+    num_classes = len(int_to_char) + 1
 
-data = tf_loader.load_data_from_file('../data/umeerj/data_both_mfcc.dat', [20, 13], num_examples)
-#fs, audio = wav.read('/home/kapi/projects/research/phd/asr/data/umeerj/ume-erj/wav/JE/DOS/F01/S6_001.wav')
-#data[0] = (data[0][0], mfcc(audio, samplerate=fs), data[0][2], data[0][3])
-alphabet = tf_loader.get_alphabet2([d[3] for d in data])
-int_to_char = {i: char for i, char in enumerate([SPACE_TOKEN] + alphabet)}
-char_to_int = {char: i for i, char in int_to_char.items()}
-num_classes = len(int_to_char) + 1
-
-all_inputs = [d[2] for d in data]
-    #all_inputs = tf_loader.pad_data2(all_inputs, 0)
-all_inputs_mean = np.sum([np.sum(s) for s in all_inputs]) / np.sum([np.size(s) for s in all_inputs])
-    #samples_min = np.min([np.min(s) for s in sampless])
-all_inputs_std = np.sqrt(np.sum([np.sum(np.power(s - all_inputs_mean, 2)) for s in all_inputs]) /
+    all_inputs = [d[2] for d in data]
+    # all_inputs = tf_loader.pad_data2(all_inputs, 0)
+    all_inputs_mean = np.sum([np.sum(s) for s in all_inputs]) / np.sum([np.size(s) for s in all_inputs])
+    # samples_min = np.min([np.min(s) for s in sampless])
+    all_inputs_std = np.sqrt(np.sum([np.sum(np.power(s - all_inputs_mean, 2)) for s in all_inputs]) /
                              np.sum([np.size(s) for s in all_inputs]))
 
-    #samples_max = np.max([np.max(s) for s in sampless])
-    #samples_mean = np.mean(sampless)
-    #samples_std = np.std(sampless)
-    #sampless = (sampless - np.mean(sampless)) / np.std(sampless)
-    #sampless = (sampless - samples_min) / (samples_max - samples_min)
+    # samples_max = np.max([np.max(s) for s in sampless])
+    # samples_mean = np.mean(sampless)
+    # samples_std = np.std(sampless)
+    # sampless = (sampless - np.mean(sampless)) / np.std(sampless)
+    # sampless = (sampless - samples_min) / (samples_max - samples_min)
 
-all_targets = [d[3] for d in data]
-originals = [' '.join(t.strip().lower().split(' '))
-                   .replace('.', '').replace('-', '').replace("'", '').replace(':', '').replace(',', '').replace('?', '').replace('!', '')
-               for t in all_targets]
-all_targets = [target.replace(' ', '  ') for target in originals]
-all_targets = [target.split(' ') for target in all_targets]
-all_targets = [np.hstack([SPACE_TOKEN if x == '' else list(x) for x in target]) for target in all_targets]
-#all_targets = [np.asarray([SPACE_INDEX if x == SPACE_TOKEN else ord(x) - FIRST_INDEX for x in target]) for target in all_targets]
-all_targets = [np.asarray([char_to_int[x] for x in target]) for target in all_targets]
+    all_targets = [d[3] for d in data]
+    originals = [' '.join(t.strip().lower().split(' '))
+                     .replace('.', '').replace('-', '').replace("'", '').replace(':', '').replace(',', '').replace('?',
+                                                                                                                   '').replace(
+        '!', '')
+                 for t in all_targets]
+    all_targets = [target.replace(' ', '  ') for target in originals]
+    all_targets = [target.split(' ') for target in all_targets]
+    all_targets = [np.hstack([SPACE_TOKEN if x == '' else list(x) for x in target]) for target in all_targets]
+    # all_targets = [np.asarray([SPACE_INDEX if x == SPACE_TOKEN else ord(x) - FIRST_INDEX for x in target]) for target in all_targets]
+    all_targets = [np.asarray([char_to_int[x] for x in target]) for target in all_targets]
 
-training_part = 0.8
-training_inputs = all_inputs[:int(training_part * len(all_inputs))]
-training_targets = all_targets[:int(training_part * len(all_inputs))]
+    training_part = 0.8
+    training_inputs = all_inputs[:int(training_part * len(all_inputs))]
+    training_targets = all_targets[:int(training_part * len(all_inputs))]
 
-test_inputs = all_inputs[int(training_part * len(all_inputs)):]
-test_targets = all_targets[int(training_part * len(all_inputs)):]
+    test_inputs = all_inputs[int(training_part * len(all_inputs)):]
+    test_targets = all_targets[int(training_part * len(all_inputs)):]
 
-    # THE MAIN CODE!
-def train():
     graph = tf.Graph()
     with graph.as_default():
         # e.g: log filter bank or MFCC features

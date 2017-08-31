@@ -39,7 +39,7 @@ def pad_data2(data, padder):
 
 batches_saves = defaultdict(list)
 
-def batch_generator(samples, targets, batch_size, samples_min, samples_max, target_parser = None, mode = 'training'):
+def batch_generator(samples, targets, batch_size, samples_mean, samples_std, target_parser = None, mode ='training'):
     if mode in batches_saves:
         for line in batches_saves[mode]:
             yield line
@@ -47,8 +47,8 @@ def batch_generator(samples, targets, batch_size, samples_min, samples_max, targ
         for batch_i in range(len(samples) // batch_size):
             batch_start = batch_size * batch_i
             rsamples = samples[batch_start:batch_start + batch_size]
-            #rsamples = pad_data2(rsamples, 0)
-            #rsamples = (rsamples - samples_min) / (samples_max - samples_min)
+            rsamples = pad_data2(rsamples, 0)
+            rsamples = (rsamples - samples_mean) / (samples_std)# - samples_min)
             labels = targets[batch_start:batch_start + batch_size]
 #            labels = pad_data2(labels, 0)
             samples_lengths = [s.shape[0] for s in rsamples]
@@ -135,13 +135,15 @@ def save_data_to_file(data, path):
 def load_data_from_file(path, num_features, samples):
     data = []
     with open(path) as f:
-        i = 0
         for _ in range(samples):
             fname = f.readline().strip()
             nums = []
-            for i in range(num_features):
+            nums2 = []
+            for i in range(num_features[0]):
                 nums.append(np.array([float(n) for n in f.readline().split()]))
+            for i in range(num_features[1]):
+                nums2.append(np.array([float(n) for n in f.readline().split()]))
             original_text = f.readline().strip()
-            #text = f.readline()
-            data.append((fname, np.array(nums).T, original_text, original_text))#, [int(t) for t in text.split()]))
+            data.append((fname, np.array(nums).T, np.array(nums2).T,
+                         original_text, original_text))
     return data

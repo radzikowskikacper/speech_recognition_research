@@ -13,8 +13,8 @@ from .utils import sparse_tuple_from as sparse_tuple_from
 
 # Constants
 SPACE_TOKEN = '<space>'
-SPACE_INDEX = 0
-FIRST_INDEX = ord('a') - 1  # 0 is reserved to space
+#SPACE_INDEX = 0
+#FIRST_INDEX = ord('a') - 1  # 0 is reserved to space
 
 # Some configs
 num_features = 20
@@ -22,21 +22,24 @@ num_features = 20
 num_classes = ord('z') - ord('a') + 1 + 1 + 1
 
 # Hyper-parameters
-num_epochs = 1000
+num_epochs = 500
 num_hidden = 50
 num_layers = 1
 batch_size = 1
 initial_learning_rate = 1e-2
 momentum = 0.9
 
-num_examples = 2
-num_batches_per_epoch = int(num_examples/batch_size)
+num_examples = 1
 
 # Loading the data
 
 data = tf_loader.load_data_from_file('../data/umeerj/data.dat', num_features, num_examples)
+alphabet = tf_loader.get_alphabet2([d[2] for d in data])
+int_to_char = {i: char for i, char in enumerate([SPACE_TOKEN] + alphabet)}
+char_to_int = {char: i for i, char in int_to_char.items()}
+num_classes = len(int_to_char) + 1
 sampless = [d[1] for d in data]
-#sampless = tf_loader.pad_data2(sampless, 0)
+sampless = tf_loader.pad_data2(sampless, 0)
 originals = [d[2] for d in data]
 data = None
 
@@ -47,7 +50,7 @@ samples_max = np.max([np.max(s) for s in sampless])
 #samples_mean = np.mean(sampless)
 #samples_std = np.std(sampless)
 
-#sampless = (sampless - np.mean(sampless)) / np.std(sampless)
+sampless = (sampless - np.mean(sampless)) / np.std(sampless)
 #sampless = (sampless - samples_min) / (samples_max - samples_min)
 
 targets = [' '.join(t.strip().lower().split(' '))
@@ -56,7 +59,8 @@ targets = [' '.join(t.strip().lower().split(' '))
 targets = [target.replace(' ', '  ') for target in targets]
 targets = [target.split(' ') for target in targets]
 targets = [np.hstack([SPACE_TOKEN if x == '' else list(x) for x in target]) for target in targets]
-targetss = [np.asarray([SPACE_INDEX if x == SPACE_TOKEN else ord(x) - FIRST_INDEX for x in target]) for target in targets]
+#targetss = [np.asarray([SPACE_INDEX if x == SPACE_TOKEN else ord(x) - FIRST_INDEX for x in target]) for target in targets]
+targetss = [np.asarray([char_to_int[x] for x in target]) for target in targets]
 
 #for samples1, targets, samples_len, _ in batch_generator:
 #    targets1 = sparse_tuple_from(targets)
@@ -163,11 +167,12 @@ with tf.Session(graph=graph, config=config) as session:
     # Decoding
     d = session.run(decoded[0], feed_dict={inputs: train_inputs, seq_len : train_seq_len})
     print(d[1])
-    str_decoded = ''.join([chr(x) for x in np.asarray(d[1]) + FIRST_INDEX])
+    #str_decoded = ''.join([chr(x) for x in np.asarray(d[1]) + FIRST_INDEX])
+    str_decoded = ''.join([int_to_char[x] for x in np.asarray(d[1])])
     # Replacing blank label to none
-    str_decoded = str_decoded.replace(chr(ord('z') + 1), '')
+    str_decoded = str_decoded.replace(chr(ord('z') + 1), '<BLANK>')
     # Replacing space label to space
-    str_decoded = str_decoded.replace(chr(ord('a') - 1), ' ')
+    str_decoded = str_decoded.replace('<space>', ' ')
 
     print('Original:\n{}'.format(originals))
     print('Decoded:\n{}'.format(str_decoded))

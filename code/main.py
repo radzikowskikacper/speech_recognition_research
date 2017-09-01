@@ -33,7 +33,7 @@ if __name__ == '__main__':
     if len(arguments) > 2:
         ctc_tensorflow_example.train(sys.argv[2:])
     else:
-        ctc_tensorflow_example.train([200, 50, 1, 1, 0.01, 0.9, 5])
+        ctc_tensorflow_example.train([200, 50, 1, 1, 0.01, 0.9, 10])
     #from training.normal_ctc import ccc
 
 

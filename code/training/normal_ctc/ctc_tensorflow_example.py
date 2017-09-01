@@ -46,14 +46,14 @@ def train(arguments):
 
     all_targets = [d[3] for d in data]
     originals = [' '.join(t.strip().lower().split(' '))
-                     .replace('.', '').replace('-', '').replace("'", '').replace(':', '').replace(',', '').replace('?',
-                                                                                                                   '').replace(
-        '!', '')
+                     .replace('.', '').replace('-', '').replace("'", '').replace(':', '').replace(',', '').
+                        replace('?', '').replace('!', '')
                  for t in all_targets]
     all_targets = [target.replace(' ', '  ') for target in originals]
     all_targets = [target.split(' ') for target in all_targets]
     all_targets = [np.hstack([SPACE_TOKEN if x == '' else list(x) for x in target]) for target in all_targets]
-    # all_targets = [np.asarray([SPACE_INDEX if x == SPACE_TOKEN else ord(x) - FIRST_INDEX for x in target]) for target in all_targets]
+    # all_targets = [np.asarray([SPACE_INDEX if x == SPACE_TOKEN else ord(x) - FIRST_INDEX for x in target])
+    #               for target in all_targets]
     all_targets = [np.asarray([char_to_int[x] for x in target]) for target in all_targets]
 
     training_part = 0.8
@@ -140,50 +140,52 @@ def train(arguments):
         saver = tf.train.Saver()
         saved = True
 
-        test_batch_generator = tf_loader.batch_generator(test_inputs, test_targets, batch_size, training_inputs_mean, training_inputs_std, target_parser=sparse_tuple_from, mode='testing')
-
+        #test_batch_generator = tf_loader.batch_generator(test_inputs, test_targets, batch_size, training_inputs_mean,
+                    # training_inputs_std, target_parser=sparse_tuple_from, mode='testing')
+        training_examples = len(training_inputs)
         for curr_epoch in range(num_epochs):
-            train_cost = train_ler = 0
+            train_cost = train_ler =  0
             start = time.time()
 
             for train_inputs, train_targets, train_seq_len, _ in \
-                    tf_loader.batch_generator(training_inputs, training_targets, batch_size, training_inputs_mean, training_inputs_std, target_parser = sparse_tuple_from):#[(samples1, targets1, samples_len, 4)]:
+                    tf_loader.batch_generator(training_inputs, training_targets, batch_size, training_inputs_mean,
+                                              training_inputs_std, target_parser = sparse_tuple_from):
                 feed = {inputs: train_inputs,
                         targets: train_targets,
                         seq_len: train_seq_len}
                 batch_cost, _ = session.run([cost, optimizer], feed)
-                train_cost += batch_cost*batch_size
-                train_ler += session.run(ler, feed_dict=feed)*batch_size
+                train_cost += batch_size * batch_cost
+                lerr = session.run(ler, feed_dict=feed)
+                train_ler += lerr*batch_size
 
-            train_cost /= num_examples
-            train_ler /= num_examples
+            train_cost /= training_examples
+            train_ler /= training_examples
 
-            try:
-                test_input, test_target, test_seq_len, _ = next(test_batch_generator)
-            except StopIteration:
-                test_batch_generator = tf_loader.batch_generator(test_inputs, test_targets, batch_size,
-                                                                 training_inputs_mean, training_inputs_std,
-                                                                 mode='testing', target_parser=sparse_tuple_from)
-                test_input, test_target, test_seq_len, _ = next(test_batch_generator)
+            val_cost = val_ler = 0
+            for test_input, test_target, test_seq_len, _ in \
+                    tf_loader.batch_generator(test_inputs, test_targets, batch_size, training_inputs_mean,
+                                              training_inputs_std, target_parser=sparse_tuple_from, mode='testing'):
+                val_feed = {inputs: test_input,
+                            targets: test_target,
+                            seq_len: test_seq_len}
+                v_cost, v_ler = session.run([cost, ler], feed_dict=val_feed)
+                val_cost += v_cost*batch_size
+                val_ler += v_ler*batch_size
+            val_cost /= len(test_inputs)
+            val_ler /= len(test_inputs)
 
-            val_feed = {inputs: test_input,
-                        targets: test_target,
-                        seq_len: test_seq_len}
-
-            val_cost, val_ler = session.run([cost, ler], feed_dict=val_feed)
-#            if not saved:
-#                #saved = True
-#                saver.save(session, 'my_test_model')
-
-            log = "Epoch {}/{}, train_cost = {:.3f}, train_ler = {:.3f}, val_cost = {:.3f}, val_ler = {:.3f}, time = {:.3f}"
+            log = "E: {}/{}, Tr_cost: {:.3f}, Tr_err: {:.3f}, Val_cost: {:.3f}, " \
+                  "Val_err: {:.3f}, time: {:.3f} s, LR: {}, BS: {}, H: {}, L: {}, M: {}, Ex: {}"
             print(log.format(curr_epoch+1, num_epochs, train_cost, train_ler,
-                             val_cost, val_ler, time.time() - start))
+                             val_cost, val_ler, time.time() - start, initial_learning_rate, batch_size, num_hidden,
+                             num_layers, momentum, num_examples))
 
 
         # Testing network
         print('Original:\n{}'.format(originals))
-        for i, (test_input, _, test_seq_len, _) in enumerate(tf_loader.batch_generator(test_inputs, test_targets,
-                                                                                       batch_size, training_inputs_mean, training_inputs_std)):
+        for i, (test_input, _, test_seq_len, _) in \
+                enumerate(tf_loader.batch_generator(test_inputs, test_targets, batch_size, training_inputs_mean,
+                                                    training_inputs_std)):
             d = session.run(decoded[0], feed_dict={
                 inputs: test_input, seq_len : test_seq_len
             })
@@ -207,8 +209,9 @@ def load_and_test():
         input_sequence_length = graph.get_tensor_by_name('input_sequence_length:0')
         #print('\n'.join([n.name for n in graph.as_graph_def().node]))
 
-        for i, (test_input, _, test_seq_len, _) in enumerate(tf_loader.batch_generator(test_inputs, test_targets,
-                                                                                       batch_size, all_inputs_mean, all_inputs_std)):
+        for i, (test_input, _, test_seq_len, _) in \
+                enumerate(tf_loader.batch_generator(test_inputs, test_targets, batch_size, all_inputs_mean,
+                                                    all_inputs_std)):
             d = sess.run(decoded, feed_dict={
                 input_samples: test_input, input_sequence_length: test_seq_len
             })

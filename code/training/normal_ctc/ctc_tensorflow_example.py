@@ -182,7 +182,7 @@ def train(gpu, arguments):
             val_cost = val_ler = 0
             for v_inputs, v_targets, v_seq_len, _ in \
                     tf_loader.batch_generator(validation_inputs, validation_targets, batch_size, training_inputs_mean,
-                                              training_inputs_std, target_parser=sparse_tuple_from, mode='testing'):
+                                              training_inputs_std, target_parser=sparse_tuple_from, mode='validation'):
                 val_feed = {inputs: v_inputs,
                             targets: v_targets,
                             seq_len: v_seq_len}

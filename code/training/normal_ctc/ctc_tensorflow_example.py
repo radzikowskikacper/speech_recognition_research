@@ -189,8 +189,8 @@ def train(gpu, arguments):
                 v_cost, v_ler = session.run([cost, ler], feed_dict=val_feed)
                 val_cost += v_cost*batch_size
                 val_ler += v_ler*batch_size
-            val_cost /= len(testing_data)
-            val_ler /= len(testing_data)
+            val_cost /= len(validation_data)
+            val_ler /= len(validation_data)
 
             log = "E: {}/{}, Tr_cost: {:.3f}, Tr_err: {:.3f}, Val_cost: {:.3f}, " \
                   "Val_err: {:.3f}, time: {:.3f} s - - - GPU: {}, H: {}, L: {}, BS: {}, LR: {}, M: {}, Ex: {}"

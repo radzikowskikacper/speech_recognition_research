@@ -182,10 +182,10 @@ def train(arguments):
 
 
         # Testing network
-        print('Original:\n{}'.format(originals))
+        print('Original:\n{}'.format(originals[int(training_part * len(all_inputs)):]))
         for i, (test_input, _, test_seq_len, _) in \
                 enumerate(tf_loader.batch_generator(test_inputs, test_targets, batch_size, training_inputs_mean,
-                                                    training_inputs_std)):
+                                                    training_inputs_std, mode='testing')):
             d = session.run(decoded[0], feed_dict={
                 inputs: test_input, seq_len : test_seq_len
             })

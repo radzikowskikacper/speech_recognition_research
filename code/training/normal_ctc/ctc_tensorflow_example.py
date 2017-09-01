@@ -66,18 +66,23 @@ def train(gpu, arguments):
     data = [(d[0], d[1], d[2], all_targets[i], d[4]) for i, d in enumerate(data)]
 
     training_part = 0.8
-    training_data = data[:int(training_part * len(data))]
+    testing_part = 0.1
 
+    training_data = data[:int(training_part * len(data))]
     training_inputs = [d[2] for d in training_data]#all_inputs[:int(training_part * len(all_inputs))]
     training_targets = [d[3] for d in training_data]#all_targets[:int(training_part * len(all_inputs))]
     training_inputs_mean = np.sum([np.sum(s) for s in training_inputs]) / np.sum([np.size(s) for s in training_inputs])
     training_inputs_std = np.sqrt(np.sum([np.sum(np.power(s - training_inputs_mean, 2)) for s in training_inputs]) /
                              np.sum([np.size(s) for s in training_inputs]))
 
-    testing_data = data[int(training_part * len(data)):]
+    testing_data = data[int(training_part * len(data)):int((training_part + testing_part) * len(data))]
     #testing_data = training_data
     testing_inputs = [d[2] for d in testing_data]#all_inputs[int(training_part * len(all_inputs)):]
     testing_targets = [d[3] for d in testing_data]#all_targets[int(training_part * len(all_inputs)):]
+
+    validation_data = data[int((training_part + testing_part) * len(data)):]
+    validation_inputs = [d[2] for d in validation_data]
+    validation_targets = [d[3] for d in validation_data]
 
     graph = tf.Graph()
     with graph.as_default():
@@ -175,12 +180,12 @@ def train(gpu, arguments):
             train_ler /= len(training_data)
 
             val_cost = val_ler = 0
-            for test_inputs, test_targets, test_seq_len, _ in \
-                    tf_loader.batch_generator(testing_inputs, testing_targets, batch_size, training_inputs_mean,
+            for v_inputs, v_targets, v_seq_len, _ in \
+                    tf_loader.batch_generator(validation_inputs, validation_targets, batch_size, training_inputs_mean,
                                               training_inputs_std, target_parser=sparse_tuple_from, mode='testing'):
-                val_feed = {inputs: test_inputs,
-                            targets: test_targets,
-                            seq_len: test_seq_len}
+                val_feed = {inputs: v_inputs,
+                            targets: v_targets,
+                            seq_len: v_seq_len}
                 v_cost, v_ler = session.run([cost, ler], feed_dict=val_feed)
                 val_cost += v_cost*batch_size
                 val_ler += v_ler*batch_size
@@ -198,6 +203,22 @@ def train(gpu, arguments):
                 with open(model_folder_name + '/params.txt', 'w+') as f:
                     f.write(str(val_ler))
                 lowest_val_error = val_ler
+
+        # Testing network
+        print('Original:\n{}'.format([d[4] for d in testing_data]))#originals[int(training_part * len(all_inputs)):]))
+        for i, (test_inputs, _, test_seq_len, _) in \
+                enumerate(tf_loader.batch_generator(validation_inputs, validation_targets, batch_size, training_inputs_mean,
+                                                    training_inputs_std, mode='testing')):
+            d = session.run(decoded[0], feed_dict={
+                inputs: test_inputs, seq_len : test_seq_len
+            })
+            #str_decoded = ''.join([chr(x) for x in np.asarray(d[1]) + FIRST_INDEX])
+            str_decoded = ''.join([int_to_char[x] for x in np.asarray(d[1])])
+            # Replacing blank label to none
+            str_decoded = str_decoded.replace(chr(ord('z') + 1), '<BLANK>')
+            # Replacing space label to space
+            str_decoded = str_decoded.replace('<space>', ' ')
+            print('Decoded:\n{}'.format(str_decoded))
 
         # Testing network
         print('Original:\n{}'.format([d[4] for d in testing_data]))#originals[int(training_part * len(all_inputs)):]))

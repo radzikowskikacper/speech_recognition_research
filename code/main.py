@@ -31,9 +31,9 @@ if __name__ == '__main__':
     #from training.normal_s2s_encdec import original
     from training.normal_ctc import ctc_tensorflow_example
     if len(arguments) > 2:
-        ctc_tensorflow_example.train(sys.argv[2:])
+        ctc_tensorflow_example.train(str(arguments[1]), sys.argv[2:])
     else:
-        ctc_tensorflow_example.train([200, 50, 1, 1, 0.01, 0.9, 10])
+        ctc_tensorflow_example.train('def', [200, 50, 1, 1, 0.01, 0.9, 10])
     #from training.normal_ctc import ccc
 
 

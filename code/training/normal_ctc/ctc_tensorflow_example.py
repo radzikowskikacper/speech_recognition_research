@@ -13,7 +13,7 @@ from .utils import maybe_download as maybe_download
 from .utils import sparse_tuple_from as sparse_tuple_from
 
 # THE MAIN CODE!
-def train(arguments):
+def train(gpu, arguments):
     # Constants
     SPACE_TOKEN = '<space>'
     # SPACE_INDEX = 0
@@ -183,9 +183,9 @@ def train(arguments):
             val_ler /= len(testing_data)
 
             log = "E: {}/{}, Tr_cost: {:.3f}, Tr_err: {:.3f}, Val_cost: {:.3f}, " \
-                  "Val_err: {:.3f}, time: {:.3f} s - - - H: {}, L: {}, BS: {}, LR: {}, M: {}, Ex: {}"
+                  "Val_err: {:.3f}, time: {:.3f} s - - - GPU: {}, H: {}, L: {}, BS: {}, LR: {}, M: {}, Ex: {}"
             print(log.format(curr_epoch+1, num_epochs, train_cost, train_ler,
-                             val_cost, val_ler, time.time() - start, num_hidden, num_layers, batch_size,
+                             val_cost, val_ler, time.time() - start, gpu, num_hidden, num_layers, batch_size,
                              initial_learning_rate, momentum, num_examples))
 
 

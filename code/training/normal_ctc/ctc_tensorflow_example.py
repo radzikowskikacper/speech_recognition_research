@@ -1,4 +1,4 @@
-import time
+import time, os
 import tensorflow as tf
 import scipy.io.wavfile as wav
 import numpy as np
@@ -14,6 +14,10 @@ from .utils import sparse_tuple_from as sparse_tuple_from
 
 # THE MAIN CODE!
 def train(gpu, arguments):
+    model_folder_name = '../data/umeerj/checkpoints/{}'.format('_'.join([str(arg) for arg in arguments]))
+    if not os.path.isdir(model_folder_name):
+        os.makedirs(model_folder_name)
+
     # Constants
     SPACE_TOKEN = '<space>'
     # SPACE_INDEX = 0
@@ -151,6 +155,7 @@ def train(gpu, arguments):
 
         #test_batch_generator = tf_loader.batch_generator(test_inputs, test_targets, batch_size, training_inputs_mean,
                     # training_inputs_std, target_parser=sparse_tuple_from, mode='testing')
+        lowest_val_error = 1.1
         for curr_epoch in range(num_epochs):
             train_cost = train_ler =  0
             start = time.time()
@@ -188,6 +193,11 @@ def train(gpu, arguments):
                              val_cost, val_ler, time.time() - start, gpu, num_hidden, num_layers, batch_size,
                              initial_learning_rate, momentum, num_examples))
 
+            if val_ler < lowest_val_error:
+                saver.save(session, model_folder_name + '/model')
+                with open(model_folder_name + '/params.txt', 'w+') as f:
+                    f.write(str(val_ler))
+                lowest_val_error = val_ler
 
         # Testing network
         print('Original:\n{}'.format([d[4] for d in testing_data]))#originals[int(training_part * len(all_inputs)):]))

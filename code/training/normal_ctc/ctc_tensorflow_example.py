@@ -183,10 +183,10 @@ def train(arguments):
             val_ler /= len(testing_data)
 
             log = "E: {}/{}, Tr_cost: {:.3f}, Tr_err: {:.3f}, Val_cost: {:.3f}, " \
-                  "Val_err: {:.3f}, time: {:.3f} s, LR: {}, BS: {}, H: {}, L: {}, M: {}, Ex: {}"
+                  "Val_err: {:.3f}, time: {:.3f} s - - - H: {}, L: {}, BS: {}, LR: {}, M: {}, Ex: {}"
             print(log.format(curr_epoch+1, num_epochs, train_cost, train_ler,
-                             val_cost, val_ler, time.time() - start, initial_learning_rate, batch_size, num_hidden,
-                             num_layers, momentum, num_examples))
+                             val_cost, val_ler, time.time() - start, num_hidden, num_layers, batch_size,
+                             initial_learning_rate, momentum, num_examples))
 
 
         # Testing network

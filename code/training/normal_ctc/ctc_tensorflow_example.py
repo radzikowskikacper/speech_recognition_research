@@ -166,9 +166,9 @@ def train(gpu, arguments):
                 feed = {inputs: train_inputs,
                         targets: train_targets,
                         seq_len: train_seq_len}
-                batch_cost, _ = session.run([cost, optimizer], feed)
+                batch_cost, _, lerr = session.run([cost, optimizer, ler], feed)
                 train_cost += batch_size * batch_cost
-                lerr = session.run(ler, feed_dict=feed)
+                #lerr = session.run(ler, feed_dict=feed)
                 train_ler += lerr*batch_size
 
             train_cost /= len(training_data)

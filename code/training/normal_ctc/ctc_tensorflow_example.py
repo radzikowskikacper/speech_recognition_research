@@ -208,7 +208,7 @@ def train(gpu, arguments):
         print('Validation:\n{}'.format([d[4] for d in validation_data]))#originals[int(training_part * len(all_inputs)):]))
         for i, (test_inputs, _, test_seq_len, _) in \
                 enumerate(tf_loader.batch_generator(validation_inputs, validation_targets, batch_size, training_inputs_mean,
-                                                    training_inputs_std, mode='testing')):
+                                                    training_inputs_std, mode='validation')):
             d = session.run(decoded[0], feed_dict={
                 inputs: test_inputs, seq_len : test_seq_len
             })

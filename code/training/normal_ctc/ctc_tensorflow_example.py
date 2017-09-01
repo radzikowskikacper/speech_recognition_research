@@ -5,6 +5,7 @@ import numpy as np
 
 from six.moves import xrange as range
 from python_speech_features import mfcc
+from random import shuffle
 
 from feature_extraction import extraction
 from data_handler.loaders import tf_loader
@@ -35,36 +36,44 @@ def train(arguments):
     # Loading the data
 
     data = tf_loader.load_data_from_file('../data/umeerj/data_both_mfcc.dat', [20, 13], num_examples)
+    print('Loaded {} data rows'.format(len(data)))
+    for i in range(3):
+        shuffle(data)
+        print('Shuffled')
+
     # fs, audio = wav.read('/home/kapi/projects/research/phd/asr/data/umeerj/ume-erj/wav/JE/DOS/F01/S6_001.wav')
     # data[0] = (data[0][0], mfcc(audio, samplerate=fs), data[0][2], data[0][3])
-    alphabet = tf_loader.get_alphabet2([d[3] for d in data])
+    alphabet = tf_loader.get_alphabet2([d[4] for d in data])
     int_to_char = {i: char for i, char in enumerate([SPACE_TOKEN] + alphabet)}
     char_to_int = {char: i for i, char in int_to_char.items()}
     num_classes = len(int_to_char) + 1
 
-    all_inputs = [d[2] for d in data]
-
     all_targets = [d[3] for d in data]
-    originals = [' '.join(t.strip().lower().split(' '))
-                     .replace('.', '').replace('-', '').replace("'", '').replace(':', '').replace(',', '').
-                        replace('?', '').replace('!', '')
+    all_targets = [' '.join(t.strip().lower().split(' '))
+                     #.replace('.', '').replace('-', '').replace("'", '').replace(':', '').replace(',', '').
+                     #   replace('?', '').replace('!', '')
                  for t in all_targets]
-    all_targets = [target.replace(' ', '  ') for target in originals]
+    all_targets = [target.replace(' ', '  ') for target in all_targets]
     all_targets = [target.split(' ') for target in all_targets]
     all_targets = [np.hstack([SPACE_TOKEN if x == '' else list(x) for x in target]) for target in all_targets]
     # all_targets = [np.asarray([SPACE_INDEX if x == SPACE_TOKEN else ord(x) - FIRST_INDEX for x in target])
     #               for target in all_targets]
     all_targets = [np.asarray([char_to_int[x] for x in target]) for target in all_targets]
+    data = [(d[0], d[1], d[2], all_targets[i], d[4]) for i, d in enumerate(data)]
 
     training_part = 0.8
-    training_inputs = all_inputs[:int(training_part * len(all_inputs))]
-    training_targets = all_targets[:int(training_part * len(all_inputs))]
+    training_data = data[:int(training_part * len(data))]
+
+    training_inputs = [d[2] for d in training_data]#all_inputs[:int(training_part * len(all_inputs))]
+    training_targets = [d[3] for d in training_data]#all_targets[:int(training_part * len(all_inputs))]
     training_inputs_mean = np.sum([np.sum(s) for s in training_inputs]) / np.sum([np.size(s) for s in training_inputs])
     training_inputs_std = np.sqrt(np.sum([np.sum(np.power(s - training_inputs_mean, 2)) for s in training_inputs]) /
                              np.sum([np.size(s) for s in training_inputs]))
 
-    test_inputs = all_inputs[int(training_part * len(all_inputs)):]
-    test_targets = all_targets[int(training_part * len(all_inputs)):]
+    testing_data = data[int(training_part * len(data)):]
+    #testing_data = training_data
+    testing_inputs = [d[2] for d in testing_data]#all_inputs[int(training_part * len(all_inputs)):]
+    testing_targets = [d[3] for d in testing_data]#all_targets[int(training_part * len(all_inputs)):]
 
     graph = tf.Graph()
     with graph.as_default():
@@ -142,7 +151,6 @@ def train(arguments):
 
         #test_batch_generator = tf_loader.batch_generator(test_inputs, test_targets, batch_size, training_inputs_mean,
                     # training_inputs_std, target_parser=sparse_tuple_from, mode='testing')
-        training_examples = len(training_inputs)
         for curr_epoch in range(num_epochs):
             train_cost = train_ler =  0
             start = time.time()
@@ -158,21 +166,21 @@ def train(arguments):
                 lerr = session.run(ler, feed_dict=feed)
                 train_ler += lerr*batch_size
 
-            train_cost /= training_examples
-            train_ler /= training_examples
+            train_cost /= len(training_data)
+            train_ler /= len(training_data)
 
             val_cost = val_ler = 0
-            for test_input, test_target, test_seq_len, _ in \
-                    tf_loader.batch_generator(test_inputs, test_targets, batch_size, training_inputs_mean,
+            for test_inputs, test_targets, test_seq_len, _ in \
+                    tf_loader.batch_generator(testing_inputs, testing_targets, batch_size, training_inputs_mean,
                                               training_inputs_std, target_parser=sparse_tuple_from, mode='testing'):
-                val_feed = {inputs: test_input,
-                            targets: test_target,
+                val_feed = {inputs: test_inputs,
+                            targets: test_targets,
                             seq_len: test_seq_len}
                 v_cost, v_ler = session.run([cost, ler], feed_dict=val_feed)
                 val_cost += v_cost*batch_size
                 val_ler += v_ler*batch_size
-            val_cost /= len(test_inputs)
-            val_ler /= len(test_inputs)
+            val_cost /= len(testing_data)
+            val_ler /= len(testing_data)
 
             log = "E: {}/{}, Tr_cost: {:.3f}, Tr_err: {:.3f}, Val_cost: {:.3f}, " \
                   "Val_err: {:.3f}, time: {:.3f} s, LR: {}, BS: {}, H: {}, L: {}, M: {}, Ex: {}"
@@ -182,12 +190,12 @@ def train(arguments):
 
 
         # Testing network
-        print('Original:\n{}'.format(originals[int(training_part * len(all_inputs)):]))
-        for i, (test_input, _, test_seq_len, _) in \
-                enumerate(tf_loader.batch_generator(test_inputs, test_targets, batch_size, training_inputs_mean,
+        print('Original:\n{}'.format([d[4] for d in testing_data]))#originals[int(training_part * len(all_inputs)):]))
+        for i, (test_inputs, _, test_seq_len, _) in \
+                enumerate(tf_loader.batch_generator(testing_inputs, testing_targets, batch_size, training_inputs_mean,
                                                     training_inputs_std, mode='testing')):
             d = session.run(decoded[0], feed_dict={
-                inputs: test_input, seq_len : test_seq_len
+                inputs: test_inputs, seq_len : test_seq_len
             })
             #str_decoded = ''.join([chr(x) for x in np.asarray(d[1]) + FIRST_INDEX])
             str_decoded = ''.join([int_to_char[x] for x in np.asarray(d[1])])

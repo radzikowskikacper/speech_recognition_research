@@ -39,11 +39,13 @@ def train(gpu, arguments):
 
     # Loading the data
 
-    data = tf_loader.load_data_from_file('../data/umeerj/data_both_mfcc.dat', [20, 13], num_examples)
+    data = tf_loader.load_data_from_file('../data/umeerj/data_both_mfcc.dat', [20, 13], 70090)  # num_examples)
     print('Loaded {} data rows'.format(len(data)))
     for i in range(3):
         shuffle(data)
         print('Shuffled')
+    data = data[:num_examples]
+    print('Taking {} samples'.format(len(data)))
 
     # fs, audio = wav.read('/home/kapi/projects/research/phd/asr/data/umeerj/ume-erj/wav/JE/DOS/F01/S6_001.wav')
     # data[0] = (data[0][0], mfcc(audio, samplerate=fs), data[0][2], data[0][3])
@@ -201,7 +203,7 @@ def train(gpu, arguments):
             if val_ler < lowest_val_error:
                 saver.save(session, model_folder_name + '/model')
                 with open(model_folder_name + '/params.txt', 'w+') as f:
-                    f.write(str(val_ler) + '\n')
+                    f.write(str(val_ler) + '\n' + str(train_ler) + '\n')
                     f.write('\n'.join([d[0] for d in validation_data]))
                     f.write('\n--\n')
                     f.write('\n'.join([d[0] for d in testing_data]))

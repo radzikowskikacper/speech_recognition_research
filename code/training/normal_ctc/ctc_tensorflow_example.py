@@ -201,7 +201,10 @@ def train(gpu, arguments):
             if val_ler < lowest_val_error:
                 saver.save(session, model_folder_name + '/model')
                 with open(model_folder_name + '/params.txt', 'w+') as f:
-                    f.write(str(val_ler))
+                    f.write(str(val_ler) + '\n')
+                    f.write('\n'.join([d[0] for d in validation_data]))
+                    f.write('\n--\n')
+                    f.write('\n'.join([d[0] for d in testing_data]))
                 lowest_val_error = val_ler
 
         # Testing network

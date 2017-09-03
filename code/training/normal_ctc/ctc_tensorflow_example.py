@@ -114,7 +114,7 @@ def train(gpu, arguments):
             [lstm_cell() for _ in range(num_layers)])
 
         # The second output is the last state and we will no use that
-        outputs, _ = tf.nn.dynamic_rnn(stack, inputs, seq_len, dtype=tf.float32)
+        outputs, _ = tf.nn.dynamic_rnn(stack, inputs, seq_len, dtype=tf.float32, parallel_iterations=1024)
 
         shape = tf.shape(inputs)
         batch_s, max_timesteps = shape[0], shape[1]
@@ -202,7 +202,7 @@ def train(gpu, arguments):
             val_ler /= len(validation_data)
 
             log = "E: {}/{}, Tr_cost: {:.3f}, Tr_err: {:.3f}, Val_cost: {:.3f}, " \
-                  "Val_err: {:.3f}, time: {:.3f} s - - - GPU: {}, H: {}, L: {}, BS: {}, LR: {}, M: {}, Ex: {}, Dr-keep: {}, {} / {} / {}"
+                  "Val_err: {:.3f}, time: {:.3f} s - - - GPU: {}, H: {}, L: {}, BS: {}, LR: {}, M: {}, Ex: {}, Dr-keep: {}, {:.3f} / {:.3f} / {:.3f}"
             print(log.format(curr_epoch+1, num_epochs, train_cost, train_ler,
                              val_cost, val_ler, time.time() - start, gpu, num_hidden, num_layers, batch_size,
                              initial_learning_rate, momentum, num_examples, dropout_keep_prob, training_part, testing_part, 1 - training_part - testing_part))

@@ -8,9 +8,22 @@ from six.moves import xrange as range
 import os
 import sys
 import numpy as np
+import tensorflow as tf
 
 url = 'https://catalog.ldc.upenn.edu/desc/addenda/'
 last_percent_reported = None
+
+def get_total_params_num():
+    total_parameters = 0
+    for variable in tf.trainable_variables():
+        # shape is an array of tf.Dimension
+        shape = variable.get_shape()
+        variable_parameters = 1
+        for dim in shape:
+            variable_parameters *= dim.value
+
+        total_parameters += variable_parameters
+    return total_parameters
 
 def download_progress_hook(count, blockSize, totalSize):
     """A hook to report the progress of a download. This is mostly intended for

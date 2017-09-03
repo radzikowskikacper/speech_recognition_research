@@ -11,6 +11,7 @@ from feature_extraction import extraction
 from data_handler.loaders import tf_loader
 from .utils import maybe_download as maybe_download
 from .utils import sparse_tuple_from as sparse_tuple_from
+from .utils import get_total_params_num
 
 # THE MAIN CODE!
 def train(gpu, arguments):
@@ -36,10 +37,11 @@ def train(gpu, arguments):
     initial_learning_rate = float(arguments[4])
     momentum = float(arguments[5])
     num_examples = int(arguments[6])
+    dropout_keep_prob = float(arguments[7])
 
     # Loading the data
 
-    data = tf_loader.load_data_from_file('../data/umeerj/data_both_mfcc.dat', [20, 13], 70090)  # num_examples)
+    data = tf_loader.load_data_from_file('../data/umeerj/data_both_mfcc.dat', [20, 13], num_examples)
     print('Loaded {} data rows'.format(len(data)))
     for i in range(3):
         shuffle(data)
@@ -92,7 +94,7 @@ def train(gpu, arguments):
         # Has size [batch_size, max_stepsize, num_features], but the
         # batch_size and max_stepsize can vary along each step
         inputs = tf.placeholder(tf.float32, [None, None, num_features], name='input_samples')
-
+        dropout_keep = tf.placeholder(tf.float32, name='dropout')
         # Here we use sparse_placeholder that will generate a
         # SparseTensor required by ctc_loss op.
         targets = tf.sparse_placeholder(tf.int32, name='input_targets')
@@ -105,7 +107,8 @@ def train(gpu, arguments):
         #   tf.nn.rnn_cell.RNNCell
         #   tf.nn.rnn_cell.GRUCell
         def lstm_cell():
-            return tf.contrib.rnn.LSTMCell(num_hidden, state_is_tuple=True)
+            cell = tf.contrib.rnn.LSTMCell(num_hidden, state_is_tuple=True)
+            return tf.contrib.rnn.DropoutWrapper(cell, output_keep_prob=dropout_keep)
 
         stack = tf.contrib.rnn.MultiRNNCell(
             [lstm_cell() for _ in range(num_layers)])
@@ -152,6 +155,8 @@ def train(gpu, arguments):
         ler = tf.reduce_mean(tf.edit_distance(tf.cast(decoded[0], tf.int32),
                                               targets), name='error_rate')
 
+        print("{} trainable parameters".format(get_total_params_num()))
+
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
     with tf.Session(graph=graph, config=config) as session:
@@ -172,7 +177,8 @@ def train(gpu, arguments):
                                               training_inputs_std, target_parser = sparse_tuple_from):
                 feed = {inputs: train_inputs,
                         targets: train_targets,
-                        seq_len: train_seq_len}
+                        seq_len: train_seq_len,
+                        dropout_keep: dropout_keep_prob}
                 batch_cost, _, lerr = session.run([cost, optimizer, ler], feed)
                 train_cost += batch_size * batch_cost
                 #lerr = session.run(ler, feed_dict=feed)
@@ -187,7 +193,8 @@ def train(gpu, arguments):
                                               training_inputs_std, target_parser=sparse_tuple_from, mode='validation'):
                 val_feed = {inputs: v_inputs,
                             targets: v_targets,
-                            seq_len: v_seq_len}
+                            seq_len: v_seq_len,
+                            dropout_keep:1}
                 v_cost, v_ler = session.run([cost, ler], feed_dict=val_feed)
                 val_cost += v_cost*batch_size
                 val_ler += v_ler*batch_size
@@ -215,7 +222,9 @@ def train(gpu, arguments):
                 enumerate(tf_loader.batch_generator(validation_inputs, validation_targets, batch_size, training_inputs_mean,
                                                     training_inputs_std, mode='validation')):
             d = session.run(decoded[0], feed_dict={
-                inputs: test_inputs, seq_len : test_seq_len
+                inputs: test_inputs,
+                seq_len : test_seq_len,
+                dropout_keep: 1
             })
             #str_decoded = ''.join([chr(x) for x in np.asarray(d[1]) + FIRST_INDEX])
             str_decoded = ''.join([int_to_char[x] for x in np.asarray(d[1])])
@@ -231,7 +240,8 @@ def train(gpu, arguments):
                 enumerate(tf_loader.batch_generator(testing_inputs, testing_targets, batch_size, training_inputs_mean,
                                                     training_inputs_std, mode='testing')):
             d = session.run(decoded[0], feed_dict={
-                inputs: test_inputs, seq_len : test_seq_len
+                inputs: test_inputs, seq_len : test_seq_len,
+                dropout_keep: 1
             })
             #str_decoded = ''.join([chr(x) for x in np.asarray(d[1]) + FIRST_INDEX])
             str_decoded = ''.join([int_to_char[x] for x in np.asarray(d[1])])

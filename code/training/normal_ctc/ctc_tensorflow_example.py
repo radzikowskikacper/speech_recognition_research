@@ -38,6 +38,8 @@ def train(gpu, arguments):
     momentum = float(arguments[5])
     num_examples = int(arguments[6])
     dropout_keep_prob = float(arguments[7])
+    training_part = float(arguments[8])#0.8
+    testing_part = float(arguments[9])#0.1
 
     # Loading the data
 
@@ -69,9 +71,6 @@ def train(gpu, arguments):
     #               for target in all_targets]
     all_targets = [np.asarray([char_to_int[x] for x in target]) for target in all_targets]
     data = [(d[0], d[1], d[2], all_targets[i], d[4]) for i, d in enumerate(data)]
-
-    training_part = 0.8
-    testing_part = 0.1
 
     training_data = data[:int(training_part * len(data))]
     training_inputs = [d[2] for d in training_data]#all_inputs[:int(training_part * len(all_inputs))]

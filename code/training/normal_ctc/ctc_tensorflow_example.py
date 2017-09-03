@@ -48,6 +48,7 @@ def train(gpu, arguments):
         print('Shuffled')
     data = data[:num_examples]
     print('Taking {} samples'.format(len(data)))
+    print('Totally {} samples, without padding'.format(sum([d[2].shape[0] for d in data])))
 
     # fs, audio = wav.read('/home/kapi/projects/research/phd/asr/data/umeerj/ume-erj/wav/JE/DOS/F01/S6_001.wav')
     # data[0] = (data[0][0], mfcc(audio, samplerate=fs), data[0][2], data[0][3])

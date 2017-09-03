@@ -202,10 +202,10 @@ def train(gpu, arguments):
             val_ler /= len(validation_data)
 
             log = "E: {}/{}, Tr_cost: {:.3f}, Tr_err: {:.3f}, Val_cost: {:.3f}, " \
-                  "Val_err: {:.3f}, time: {:.3f} s - - - GPU: {}, H: {}, L: {}, BS: {}, LR: {}, M: {}, Ex: {}"
+                  "Val_err: {:.3f}, time: {:.3f} s - - - GPU: {}, H: {}, L: {}, BS: {}, LR: {}, M: {}, Ex: {}, Dr-keep: {}"
             print(log.format(curr_epoch+1, num_epochs, train_cost, train_ler,
                              val_cost, val_ler, time.time() - start, gpu, num_hidden, num_layers, batch_size,
-                             initial_learning_rate, momentum, num_examples))
+                             initial_learning_rate, momentum, num_examples, dropout_keep_prob))
 
             if val_ler < lowest_val_error:
                 saver.save(session, model_folder_name + '/model')

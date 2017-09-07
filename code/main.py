@@ -26,14 +26,18 @@ if __name__ == '__main__':
     #from training import rajs_net
     #rajs_net.train('../data/umeerj/ume-erj/')
 
+    #from training.normal_ctc import ctc_tensorflow_multidata_example
+
     from training.normal_s2s_encdec import s2s_encdec
     #s2s_encdec.demo([2, 100, 25, 2, 0.1, 15, 0, 6, 1])#sys.argv[1:])
     #from training.normal_s2s_encdec import original
+
     from training.normal_ctc import ctc_tensorflow_example
     if len(arguments) > 2:
         ctc_tensorflow_example.train(str(arguments[1]), sys.argv[2:])
     else:
-        ctc_tensorflow_example.train('def', [200, 512, 3, 1, 0.005, 0.9, 10, 0.5, 0.8, 0.1])
+        #ctc_tensorflow_example.load_and_test()
+        ctc_tensorflow_example.train('def', [200, 50, 1, 1, 0.01, 0.9, 1, 1, 1, 1, 0.5, 0])
     #from training.normal_ctc import ccc
 
 

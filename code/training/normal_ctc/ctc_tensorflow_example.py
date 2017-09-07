@@ -13,39 +13,12 @@ from .utils import maybe_download as maybe_download
 from .utils import sparse_tuple_from as sparse_tuple_from
 from .utils import get_total_params_num
 
-# THE MAIN CODE!
-def train(gpu, arguments):
-    model_folder_name = '../data/umeerj/checkpoints/{}'.format('_'.join([str(arg) for arg in arguments]))
-    if not os.path.isdir(model_folder_name):
-        os.makedirs(model_folder_name)
-
-    # Constants
+def load_data(num_examples, training_part, testing_part, shuffle_count = 0):
     SPACE_TOKEN = '<space>'
-    # SPACE_INDEX = 0
-    # FIRST_INDEX = ord('a') - 1  # 0 is reserved to space
-
-    # Some configs
-    num_features = 13
-    # Accounting the 0th indice +  space + blank label = 28 characters
-    num_classes = ord('z') - ord('a') + 1 + 1 + 1
-
-    # Hyper-parameters
-    num_epochs = int(arguments[0])
-    num_hidden = int(arguments[1])
-    num_layers = int(arguments[2])
-    batch_size = int(arguments[3])
-    initial_learning_rate = float(arguments[4])
-    momentum = float(arguments[5])
-    num_examples = int(arguments[6])
-    dropout_keep_prob = float(arguments[7])
-    training_part = float(arguments[8])#0.8
-    testing_part = float(arguments[9])#0.1
-
-    # Loading the data
 
     data = tf_loader.load_data_from_file('../data/umeerj/data_both_mfcc.dat', [20, 13], num_examples)
     print('Loaded {} data rows'.format(len(data)))
-    for i in range(3):
+    for i in range(shuffle_count):
         shuffle(data)
         print('Shuffled')
     data = data[:num_examples]
@@ -85,8 +58,48 @@ def train(gpu, arguments):
     testing_targets = [d[3] for d in testing_data]#all_targets[int(training_part * len(all_inputs)):]
 
     validation_data = data[int((training_part + testing_part) * len(data)):]
+    #validation_data = training_data
     validation_inputs = [d[2] for d in validation_data]
     validation_targets = [d[3] for d in validation_data]
+
+    return training_inputs, training_targets, training_inputs_mean, training_inputs_std, validation_data, \
+           validation_inputs, validation_targets, testing_data, testing_inputs, testing_targets, int_to_char, num_classes
+
+# THE MAIN CODE!
+def train(gpu, arguments):
+    model_folder_name = '../data/umeerj/checkpoints/{}'.format('_'.join([str(arg) for arg in arguments]))
+    if not os.path.isdir(model_folder_name):
+        os.makedirs(model_folder_name)
+
+    # Constants
+    # SPACE_INDEX = 0
+    # FIRST_INDEX = ord('a') - 1  # 0 is reserved to space
+
+    # Some configs
+    num_features = 13
+    # Accounting the 0th indice +  space + blank label = 28 characters
+    num_classes = ord('z') - ord('a') + 1 + 1 + 1
+
+    # Hyper-parameters
+    num_epochs = int(arguments[0])
+    num_hidden = int(arguments[1])
+    num_layers = int(arguments[2])
+    batch_size = int(arguments[3])
+    initial_learning_rate = float(arguments[4])
+    momentum = float(arguments[5])
+    num_examples = int(arguments[6])
+    input_dropout_keep_prob = float(arguments[7])
+    output_dropout_keep_prob = float(arguments[8])
+    training_part = float(arguments[9])#0.8
+    testing_part = float(arguments[10])#0.1
+    shuffle_count = int(arguments[11])
+
+    # Loading the data
+
+    training_inputs, training_targets, training_inputs_mean, training_inputs_std, \
+    validation_data, validation_inputs, validation_targets, \
+    testing_data, testing_inputs, testing_targets, \
+    int_to_char, num_classes = load_data(num_examples, training_part, testing_part, shuffle_count)
 
     graph = tf.Graph()
     with graph.as_default():
@@ -94,7 +107,8 @@ def train(gpu, arguments):
         # Has size [batch_size, max_stepsize, num_features], but the
         # batch_size and max_stepsize can vary along each step
         inputs = tf.placeholder(tf.float32, [None, None, num_features], name='input_samples')
-        dropout_keep = tf.placeholder(tf.float32, name='dropout')
+        input_dropout_keep = tf.placeholder(tf.float32, name='in_dropout')
+        output_dropout_keep = tf.placeholder(tf.float32, name='out_dropout')
         # Here we use sparse_placeholder that will generate a
         # SparseTensor required by ctc_loss op.
         targets = tf.sparse_placeholder(tf.int32, name='input_targets')
@@ -108,7 +122,8 @@ def train(gpu, arguments):
         #   tf.nn.rnn_cell.GRUCell
         def lstm_cell():
             cell = tf.contrib.rnn.LSTMCell(num_hidden, state_is_tuple=True)
-            return tf.contrib.rnn.DropoutWrapper(cell, output_keep_prob=dropout_keep)
+            return tf.contrib.rnn.DropoutWrapper(cell, output_keep_prob=output_dropout_keep,
+                                                 input_keep_prob=input_dropout_keep)
 
         stack = tf.contrib.rnn.MultiRNNCell(
             [lstm_cell() for _ in range(num_layers)])
@@ -162,6 +177,8 @@ def train(gpu, arguments):
     with tf.Session(graph=graph, config=config) as session:
         # Initializate the weights and biases
         tf.global_variables_initializer().run()
+        tf.local_variables_initializer().run()
+
         saver = tf.train.Saver()
         saved = True
 
@@ -178,14 +195,15 @@ def train(gpu, arguments):
                 feed = {inputs: train_inputs,
                         targets: train_targets,
                         seq_len: train_seq_len,
-                        dropout_keep: dropout_keep_prob}
-                batch_cost, _, lerr = session.run([cost, optimizer, ler], feed)
+                        input_dropout_keep: input_dropout_keep_prob,
+                        output_dropout_keep: output_dropout_keep_prob}
+                session.run(optimizer, feed)
+                batch_cost, lerr = session.run([cost, ler], feed)
                 train_cost += batch_size * batch_cost
-                #lerr = session.run(ler, feed_dict=feed)
                 train_ler += lerr*batch_size
 
-            train_cost /= len(training_data)
-            train_ler /= len(training_data)
+            train_cost /= len(training_inputs)
+            train_ler /= len(training_inputs)
 
             val_cost = val_ler = 0
             for v_inputs, v_targets, v_seq_len, _ in \
@@ -194,22 +212,28 @@ def train(gpu, arguments):
                 val_feed = {inputs: v_inputs,
                             targets: v_targets,
                             seq_len: v_seq_len,
-                            dropout_keep:1}
+                            input_dropout_keep:1,
+                            output_dropout_keep: 1}
                 v_cost, v_ler = session.run([cost, ler], feed_dict=val_feed)
                 val_cost += v_cost*batch_size
                 val_ler += v_ler*batch_size
-            val_cost /= len(validation_data)
-            val_ler /= len(validation_data)
+            val_cost /= len(validation_inputs)
+            val_ler /= len(validation_inputs)
 
-            log = "E: {}/{}, Tr_cost: {:.3f}, Tr_err: {:.3f}, Val_cost: {:.3f}, " \
-                  "Val_err: {:.3f}, time: {:.3f} s - - - GPU: {}, H: {}, L: {}, BS: {}, LR: {}, M: {}, Ex: {}, Dr-keep: {}, {:.3f} / {:.3f} / {:.3f}"
-            print(log.format(curr_epoch+1, num_epochs, train_cost, train_ler,
-                             val_cost, val_ler, time.time() - start, gpu, num_hidden, num_layers, batch_size,
-                             initial_learning_rate, momentum, num_examples, dropout_keep_prob, training_part, testing_part, 1 - training_part - testing_part))
+            log = "E: {}/{}, Tr_cost: {:.3f}, Tr_err: {:.3f}, Val_cost: {:.3f}, Val_err: {:.3f}, time: {:.3f} s - - -" \
+                  " GPU: {}, H: {}, L: {}, BS: {}, LR: {}, M: {}, Ex: {}, Dr-keep: {} / {}, Data: {:.3f} / {:.3f} / {:.3f}"\
+                .format(curr_epoch+1, num_epochs, train_cost, train_ler, val_cost, val_ler, time.time() - start,
+                             gpu, num_hidden, num_layers, batch_size, initial_learning_rate, momentum, num_examples,
+                             input_dropout_keep_prob, output_dropout_keep_prob, training_part, testing_part,
+                             1 - training_part - testing_part)
+            print(log)
+            with open(model_folder_name + '/history.txt', 'a') as f:
+                f.write(log)
 
             if val_ler < lowest_val_error:
                 saver.save(session, model_folder_name + '/model')
                 with open(model_folder_name + '/params.txt', 'w+') as f:
+                    f.write(str(curr_epoch) + '\n')
                     f.write(str(val_ler) + '\n' + str(train_ler) + '\n')
                     f.write('\n'.join([d[0] for d in validation_data]))
                     f.write('\n--\n')
@@ -224,7 +248,8 @@ def train(gpu, arguments):
             d = session.run(decoded[0], feed_dict={
                 inputs: test_inputs,
                 seq_len : test_seq_len,
-                dropout_keep: 1
+                input_dropout_keep: 1,
+                output_dropout_keep: 1
             })
             #str_decoded = ''.join([chr(x) for x in np.asarray(d[1]) + FIRST_INDEX])
             str_decoded = ''.join([int_to_char[x] for x in np.asarray(d[1])])
@@ -241,7 +266,8 @@ def train(gpu, arguments):
                                                     training_inputs_std, mode='testing')):
             d = session.run(decoded[0], feed_dict={
                 inputs: test_inputs, seq_len : test_seq_len,
-                dropout_keep: 1
+                input_dropout_keep: 1,
+                output_dropout_keep: 1
             })
             #str_decoded = ''.join([chr(x) for x in np.asarray(d[1]) + FIRST_INDEX])
             str_decoded = ''.join([int_to_char[x] for x in np.asarray(d[1])])
@@ -252,22 +278,29 @@ def train(gpu, arguments):
             print('Decoded:\n{}'.format(str_decoded))
 
 def load_and_test():
-    saver = tf.train.import_meta_graph('my_test_model.meta')
+    training_inputs, training_targets, training_inputs_mean, training_inputs_std, \
+    validation_data, validation_inputs, validation_targets, \
+    testing_data, testing_inputs, testing_targets, \
+    int_to_char, num_classes = load_data(10000, 0.7, 0.15)
+    batch_size = 25
+
+    saver = tf.train.import_meta_graph('../data/umeerj/checkpoints/2000_1000_3_25_0.0005_0.9_10000_1_0.7_0.15/model.meta')
     with tf.Session() as sess:
         # First let's load meta graph and restore weights
         #saver = tf.train.import_meta_graph('my_test_model-0')
-        saver.restore(sess, tf.train.latest_checkpoint('./'))
+        saver.restore(sess, tf.train.latest_checkpoint('../data/umeerj/checkpoints/2000_1000_3_25_0.0005_0.9_10000_1_0.7_0.15/'))
         graph = tf.get_default_graph()
         decoded = graph.get_tensor_by_name('CTCGreedyDecoder:1')
         input_samples = graph.get_tensor_by_name('input_samples:0')
+        dropout_keep = graph.get_tensor_by_name('dropout:0')
         input_sequence_length = graph.get_tensor_by_name('input_sequence_length:0')
         #print('\n'.join([n.name for n in graph.as_graph_def().node]))
 
         for i, (test_input, _, test_seq_len, _) in \
-                enumerate(tf_loader.batch_generator(test_inputs, test_targets, batch_size, all_inputs_mean,
-                                                    all_inputs_std)):
+                enumerate(tf_loader.batch_generator(testing_inputs, testing_targets, batch_size, training_inputs_mean,
+                                                    training_inputs_std)):
             d = sess.run(decoded, feed_dict={
-                input_samples: test_input, input_sequence_length: test_seq_len
+                input_samples: test_input, input_sequence_length: test_seq_len, dropout_keep:1
             })
             #str_decoded = ''.join([chr(x) for x in np.asarray(d) + FIRST_INDEX])
             str_decoded = ''.join([int_to_char[x] for x in np.asarray(d)])

@@ -37,9 +37,10 @@ if __name__ == '__main__':
         ctc_tensorflow_example.train(str(arguments[1]), sys.argv[2:])
     else:
         #ctc_tensorflow_example.load_and_test()
-        ctc_tensorflow_example.train('def', [200, 50, 1, 1, 0.01, 0.9, 1, 1, 1, 1, 0.5, 0])
+        ctc_tensorflow_example.train('def', [2000, 50, 1, 1, 0.0001, 0.9, 10, 1, 1, 1, 1, 0.7, 0.15, 0.15, 0])
     #from training.normal_ctc import ccc
-
+    #from generating import train
+    #train.main()
 
     '''
     h.loader.load_data('{}/projects/research/phd/data/ume-erj'.format(path))

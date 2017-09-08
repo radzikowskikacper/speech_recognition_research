@@ -90,9 +90,11 @@ def train(gpu, arguments):
     num_examples = int(arguments[6])
     input_dropout_keep_prob = float(arguments[7])
     output_dropout_keep_prob = float(arguments[8])
-    training_part = float(arguments[9])#0.8
-    testing_part = float(arguments[10])#0.1
-    shuffle_count = int(arguments[11])
+    state_dropout_keep_prob = float(arguments[9])
+    affine_dropout_keep_prob = float(arguments[10])
+    training_part = float(arguments[11])
+    testing_part = float(arguments[12])
+    shuffle_count = int(arguments[13])
 
     # Loading the data
 
@@ -109,6 +111,8 @@ def train(gpu, arguments):
         inputs = tf.placeholder(tf.float32, [None, None, num_features], name='input_samples')
         input_dropout_keep = tf.placeholder(tf.float32, name='in_dropout')
         output_dropout_keep = tf.placeholder(tf.float32, name='out_dropout')
+        state_dropout_keep = tf.placeholder(tf.float32, name='state_dropout')
+        affine_dropout_keep = tf.placeholder(tf.float32, name="affine_dropout")
         # Here we use sparse_placeholder that will generate a
         # SparseTensor required by ctc_loss op.
         targets = tf.sparse_placeholder(tf.int32, name='input_targets')
@@ -123,7 +127,8 @@ def train(gpu, arguments):
         def lstm_cell():
             cell = tf.contrib.rnn.LSTMCell(num_hidden, state_is_tuple=True)
             return tf.contrib.rnn.DropoutWrapper(cell, output_keep_prob=output_dropout_keep,
-                                                 input_keep_prob=input_dropout_keep)
+                                                 input_keep_prob=input_dropout_keep,
+                                                 state_keep_prob=state_dropout_keep)
 
         stack = tf.contrib.rnn.MultiRNNCell(
             [lstm_cell() for _ in range(num_layers)])
@@ -149,6 +154,7 @@ def train(gpu, arguments):
 
         # Doing the affine projection
         logits = tf.matmul(outputs, W) + b
+        logits = tf.nn.dropout(logits, affine_dropout_keep)
 
         # Reshaping back to the original shape
         logits = tf.reshape(logits, [batch_s, -1, num_classes])
@@ -196,7 +202,9 @@ def train(gpu, arguments):
                         targets: train_targets,
                         seq_len: train_seq_len,
                         input_dropout_keep: input_dropout_keep_prob,
-                        output_dropout_keep: output_dropout_keep_prob}
+                        output_dropout_keep: output_dropout_keep_prob,
+                        state_dropout_keep: state_dropout_keep_prob,
+                        affine_dropout_keep: affine_dropout_keep_prob}
                 session.run(optimizer, feed)
                 batch_cost, lerr = session.run([cost, ler], feed)
                 train_cost += batch_size * batch_cost
@@ -213,7 +221,10 @@ def train(gpu, arguments):
                             targets: v_targets,
                             seq_len: v_seq_len,
                             input_dropout_keep:1,
-                            output_dropout_keep: 1}
+                            output_dropout_keep: 1,
+                            state_dropout_keep: 1,
+                            affine_dropout_keep: 1
+                            }
                 v_cost, v_ler = session.run([cost, ler], feed_dict=val_feed)
                 val_cost += v_cost*batch_size
                 val_ler += v_ler*batch_size
@@ -249,7 +260,9 @@ def train(gpu, arguments):
                 inputs: test_inputs,
                 seq_len : test_seq_len,
                 input_dropout_keep: 1,
-                output_dropout_keep: 1
+                output_dropout_keep: 1,
+                state_dropout_keep: 1,
+                affine_dropout_keep: 1
             })
             #str_decoded = ''.join([chr(x) for x in np.asarray(d[1]) + FIRST_INDEX])
             str_decoded = ''.join([int_to_char[x] for x in np.asarray(d[1])])
@@ -267,7 +280,9 @@ def train(gpu, arguments):
             d = session.run(decoded[0], feed_dict={
                 inputs: test_inputs, seq_len : test_seq_len,
                 input_dropout_keep: 1,
-                output_dropout_keep: 1
+                output_dropout_keep: 1,
+                state_dropout_keep: 1,
+                affine_dropout_keep: 1
             })
             #str_decoded = ''.join([chr(x) for x in np.asarray(d[1]) + FIRST_INDEX])
             str_decoded = ''.join([int_to_char[x] for x in np.asarray(d[1])])

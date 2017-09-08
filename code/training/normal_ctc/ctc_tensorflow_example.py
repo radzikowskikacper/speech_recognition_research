@@ -232,10 +232,11 @@ def train(gpu, arguments):
             val_ler /= len(validation_inputs)
 
             log = "E: {}/{}, Tr_cost: {:.3f}, Tr_err: {:.3f}, Val_cost: {:.3f}, Val_err: {:.3f}, time: {:.3f} s - - -" \
-                  " GPU: {}, H: {}, L: {}, BS: {}, LR: {}, M: {}, Ex: {}, Dr-keep: {} / {}, Data: {:.3f} / {:.3f} / {:.3f}, Shuffle: {}"\
+                  " GPU: {}, H: {}, L: {}, BS: {}, LR: {}, M: {}, Ex: {}, Dr-keep: {} / {} / {} / {}, Data: {:.3f} / {:.3f} / {:.3f}, Shuffle: {}"\
                 .format(curr_epoch+1, num_epochs, train_cost, train_ler, val_cost, val_ler, time.time() - start,
                              gpu, num_hidden, num_layers, batch_size, initial_learning_rate, momentum, num_examples,
-                             input_dropout_keep_prob, output_dropout_keep_prob, training_part, testing_part,
+                             input_dropout_keep_prob, output_dropout_keep_prob, state_dropout_keep_prob,
+                             affine_dropout_keep_prob, training_part, testing_part,
                              1 - training_part - testing_part, shuffle_count)
             print(log)
             with open(model_folder_name + '/history.txt', 'a') as f:

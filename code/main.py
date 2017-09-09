@@ -37,7 +37,7 @@ if __name__ == '__main__':
         ctc_tensorflow_example.train(str(arguments[1]), sys.argv[2:])
     else:
         #ctc_tensorflow_example.load_and_test()
-        ctc_tensorflow_example.train('def', [2000, 50, 1, 1, 0.0001, 0.9, 10, 1, 1, 1, 1, 0.7, 0.15, 0.15, 0])
+        ctc_tensorflow_example.train('def', [2000, 50, 1, 1, 0.0001, 0.9, 70000, 1, 1, 1, 1, 0.7, 0.15, 0, 1])
     #from training.normal_ctc import ccc
     #from generating import train
     #train.main()

@@ -13,7 +13,7 @@ from .utils import maybe_download as maybe_download
 from .utils import sparse_tuple_from as sparse_tuple_from
 from .utils import get_total_params_num
 
-def load_data(num_examples, training_part, testing_part, shuffle_count = 0):
+def load_data(num_examples, training_part, testing_part, shuffle_count = 0, sort_by_length = False):
     SPACE_TOKEN = '<space>'
 
     data = tf_loader.load_data_from_file('../data/umeerj/data_both_mfcc.dat', [20, 13], num_examples)
@@ -21,8 +21,14 @@ def load_data(num_examples, training_part, testing_part, shuffle_count = 0):
     for i in range(shuffle_count):
         shuffle(data)
         print('Shuffled')
+
     data = data[:num_examples]
     print('Taking {} samples'.format(len(data)))
+
+    if sort_by_length:
+        data = sorted(data, key= lambda x: x[2].shape[0], reverse=True)
+    print('Sorting examples by descending sequence length')
+
     print('Totally {} samples, without padding'.format(sum([d[2].shape[0] for d in data])))
 
     # fs, audio = wav.read('/home/kapi/projects/research/phd/asr/data/umeerj/ume-erj/wav/JE/DOS/F01/S6_001.wav')
@@ -95,13 +101,14 @@ def train(gpu, arguments):
     training_part = float(arguments[11])
     testing_part = float(arguments[12])
     shuffle_count = int(arguments[13])
+    sort_by_length = bool(int(arguments[14]))
 
     # Loading the data
 
     training_inputs, training_targets, training_inputs_mean, training_inputs_std, \
     validation_data, validation_inputs, validation_targets, \
     testing_data, testing_inputs, testing_targets, \
-    int_to_char, num_classes = load_data(num_examples, training_part, testing_part, shuffle_count)
+    int_to_char, num_classes = load_data(num_examples, training_part, testing_part, shuffle_count, sort_by_length)
 
     graph = tf.Graph()
     with graph.as_default():

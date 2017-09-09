@@ -18,16 +18,17 @@ def load_data(num_examples, training_part, testing_part, shuffle_count = 0, sort
 
     data = tf_loader.load_data_from_file('../data/umeerj/data_both_mfcc.dat', [20, 13], num_examples)
     print('Loaded {} data rows'.format(len(data)))
-    for i in range(shuffle_count):
-        shuffle(data)
-        print('Shuffled')
-
-    data = data[:num_examples]
-    print('Taking {} samples'.format(len(data)))
 
     if sort_by_length:
         data = sorted(data, key= lambda x: x[2].shape[0], reverse=True)
         print('Sorting examples by descending sequence length')
+
+    data = data[-num_examples:]
+    print('Taking {} samples'.format(len(data)))
+
+    for i in range(shuffle_count):
+        shuffle(data)
+        print('Shuffled')
 
     print('Totally {} samples, without padding'.format(sum([d[2].shape[0] for d in data])))
 

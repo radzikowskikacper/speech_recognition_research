@@ -1,7 +1,7 @@
 import time, os
 import tensorflow as tf
 import scipy.io.wavfile as wav
-import numpy as np
+import numpy as np, matplotlib.pyplot as plt
 
 from six.moves import xrange as range
 from python_speech_features import mfcc
@@ -12,6 +12,25 @@ from data_handler.loaders import tf_loader
 from .utils import maybe_download as maybe_download
 from .utils import sparse_tuple_from as sparse_tuple_from
 from .utils import get_total_params_num
+
+def plot(train_losses, val_losses, train_errors, val_errors, fname):
+    train_loss_line, = plt.plot(np.arange(len(train_losses)), train_losses, label='Training loss')
+    val_loss_line, = plt.plot(np.arange(len(val_losses)), val_losses, label='Validation loss')
+    plt.legend(handles=[train_loss_line, val_loss_line])
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.grid(True)
+    plt.savefig("{}losses.png".format(fname))
+    plt.close()
+
+    train_err_line, = plt.plot(np.arange(len(train_errors)), train_errors, label='Training error')
+    val_err_line, = plt.plot(np.arange(len(val_errors)), val_errors, label='Validation error')
+    plt.legend(handles = [train_err_line, val_err_line])
+    plt.xlabel('Epoch')
+    plt.ylabel('Error')
+    plt.grid(True)
+    plt.savefig("{}errors.png".format(fname))
+    plt.close()
 
 def load_data(num_examples, training_part, testing_part, shuffle_count = 0, sort_by_length = False):
     SPACE_TOKEN = '<space>'
@@ -77,6 +96,11 @@ def train(gpu, arguments):
     model_folder_name = '../data/umeerj/checkpoints/{}'.format('_'.join([str(arg) for arg in arguments]))
     if not os.path.isdir(model_folder_name):
         os.makedirs(model_folder_name)
+
+    val_errors = list()
+    train_errors = list()
+    val_losses = list()
+    train_losses = list()
 
     # Constants
     # SPACE_INDEX = 0
@@ -246,7 +270,6 @@ def train(gpu, arguments):
                              input_dropout_keep_prob, output_dropout_keep_prob, state_dropout_keep_prob,
                              affine_dropout_keep_prob, training_part, testing_part,
                              1 - training_part - testing_part, shuffle_count)
-            print(log)
             with open(model_folder_name + '/history.txt', 'a') as f:
                 f.write(log + '\n')
 
@@ -259,6 +282,13 @@ def train(gpu, arguments):
                     f.write('\n--\n')
                     f.write('\n'.join([d[0] for d in testing_data]))
                 lowest_val_error = val_ler
+
+            train_losses.append(train_cost)
+            train_errors.append(train_ler)
+            val_losses.append(val_cost)
+            val_errors.append(val_ler)
+            plot(train_losses, val_losses, train_errors, val_errors, "{}/".format(model_folder_name))
+            print(log)
 
         # Testing network
         print('Validation:\n{}'.format([d[4] for d in validation_data]))#originals[int(training_part * len(all_inputs)):]))

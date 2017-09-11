@@ -184,7 +184,7 @@ def train(gpu, arguments):
         ler = tf.reduce_mean(tf.edit_distance(tf.cast(decoded[0], tf.int32),
                                               targets), name='error_rate')
 
-        print("{} trainable parameters".format(get_total_params_num()))
+        print("Totally {} trainable parameters".format(get_total_params_num()))
 
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True

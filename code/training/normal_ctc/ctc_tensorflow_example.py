@@ -16,8 +16,8 @@ from .utils import sparse_tuple_from as sparse_tuple_from
 from .utils import get_total_params_num
 
 def plot(train_losses, val_losses, train_errors, val_errors, fname):
-    train_loss_line, = plt.plot(np.arange(len(train_losses)), train_losses, label='Training loss')
-    val_loss_line, = plt.plot(np.arange(len(val_losses)), val_losses, label='Validation loss')
+    train_loss_line, = plt.plot(np.arange(1, len(train_losses) + 1), train_losses, label='Training loss')
+    val_loss_line, = plt.plot(np.arange(1, len(val_losses) + 1), val_losses, label='Validation loss')
     plt.legend(handles=[train_loss_line, val_loss_line])
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
@@ -25,8 +25,8 @@ def plot(train_losses, val_losses, train_errors, val_errors, fname):
     plt.savefig("{}losses.png".format(fname))
     plt.close()
 
-    train_err_line, = plt.plot(np.arange(len(train_errors)), train_errors, label='Training error')
-    val_err_line, = plt.plot(np.arange(len(val_errors)), val_errors, label='Validation error')
+    train_err_line, = plt.plot(np.arange(1, len(train_errors) + 1), train_errors, label='Training error')
+    val_err_line, = plt.plot(np.arange(1, len(val_errors) + 1), val_errors, label='Validation error')
     plt.legend(handles = [train_err_line, val_err_line])
     plt.xlabel('Epoch')
     plt.ylabel('Error')

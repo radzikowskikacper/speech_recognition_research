@@ -1,6 +1,8 @@
 import time, os
 import tensorflow as tf
 import scipy.io.wavfile as wav
+import matplotlib
+matplotlib.use('agg')
 import numpy as np, matplotlib.pyplot as plt
 
 from six.moves import xrange as range

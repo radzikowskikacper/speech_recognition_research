@@ -39,10 +39,7 @@ def load_data(num_examples, training_part, testing_part, shuffle_count = 0, sort
 
     data = tf_loader.load_data_from_file('../data/umeerj/data_both_mfcc.dat', [20, 13], num_examples)
     print('Loaded {} data rows'.format(len(data)))
-
-    if sort_by_length:
-        data = sorted(data, key= lambda x: x[2].shape[0], reverse=True)
-        print('Sorting examples by descending sequence length')
+    data = sorted(data, key=lambda x: x[2].shape[0], reverse=True)
 
     data = data[-num_examples:]
     print('Taking {} samples'.format(len(data)))
@@ -74,6 +71,9 @@ def load_data(num_examples, training_part, testing_part, shuffle_count = 0, sort
     data = [(d[0], d[1], d[2], all_targets[i], d[4]) for i, d in enumerate(data)]
 
     training_data = data[:int(training_part * len(data))]
+    if sort_by_length:
+        training_data = sorted(training_data, key= lambda x: x[2].shape[0], reverse=True)
+        print('Sorting examples by descending sequence length')
     training_inputs = [d[2] for d in training_data]#all_inputs[:int(training_part * len(all_inputs))]
     training_targets = [d[3] for d in training_data]#all_targets[:int(training_part * len(all_inputs))]
     training_inputs_mean = np.sum([np.sum(s) for s in training_inputs]) / np.sum([np.size(s) for s in training_inputs])
@@ -90,7 +90,7 @@ def load_data(num_examples, training_part, testing_part, shuffle_count = 0, sort
     validation_inputs = [d[2] for d in validation_data]
     validation_targets = [d[3] for d in validation_data]
 
-    return training_inputs, training_targets, training_inputs_mean, training_inputs_std, validation_data, \
+    return training_data, training_inputs, training_targets, training_inputs_mean, training_inputs_std, validation_data, \
            validation_inputs, validation_targets, testing_data, testing_inputs, testing_targets, int_to_char, num_classes
 
 # THE MAIN CODE!
@@ -132,7 +132,7 @@ def train(gpu, arguments):
 
     # Loading the data
 
-    training_inputs, training_targets, training_inputs_mean, training_inputs_std, \
+    training_data, training_inputs, training_targets, training_inputs_mean, training_inputs_std, \
     validation_data, validation_inputs, validation_targets, \
     testing_data, testing_inputs, testing_targets, \
     int_to_char, num_classes = load_data(num_examples, training_part, testing_part, shuffle_count, sort_by_length)
@@ -289,9 +289,9 @@ def train(gpu, arguments):
             val_ler /= div
             val_ler2 /= div
 
-            log = "E: {}/{}, Tr_cost: {:.3f}, Tr_err: {:.3f}, Tr_err2: {:.3f}, Tr_err3: {:.3f}, Val_cost: {:.3f}, Val_err: {:.3f}, Val_err2: {:.3f}, Val_err3: {:.3f}, time: {:.3f} s - - -" \
+            log = "E: {}/{}, Tr_cost: {:.3f}, Tr_err: {:.3f}, Tr_err3: {:.3f}, Val_cost: {:.3f}, Val_err: {:.3f}, Val_err3: {:.3f}, time: {:.3f} s - - -" \
                   " GPU: {}, H: {}, L: {}, BS: {}, LR: {}, M: {}, Ex: {}, Dr-keep: {} / {} / {} / {}, Data: {:.3f} / {:.3f} / {:.3f}, Shuffle: {}"\
-                .format(curr_epoch+1, num_epochs, train_cost, train_ler, train_ler2, train_ler3 / train_mxs, val_cost, val_ler, val_ler2, val_ler3 / val_mxs, time.time() - start,
+                .format(curr_epoch+1, num_epochs, train_cost, train_ler, train_ler3 / train_mxs, val_cost, val_ler, val_ler3 / val_mxs, time.time() - start,
                              gpu, num_hidden, num_layers, batch_size, initial_learning_rate, momentum, num_examples,
                              input_dropout_keep_prob, output_dropout_keep_prob, state_dropout_keep_prob,
                              affine_dropout_keep_prob, training_part, testing_part,
@@ -299,7 +299,7 @@ def train(gpu, arguments):
             with open(model_folder_name + '/history.txt', 'a') as f:
                 f.write(log + '\n')
 
-            if val_ler < lowest_val_error:
+            if val_ler3 / val_mxs < lowest_val_error:
                 saver.save(session, model_folder_name + '/model')
                 with open(model_folder_name + '/params.txt', 'w+') as f:
                     f.write(str(curr_epoch) + '\n')
@@ -307,12 +307,12 @@ def train(gpu, arguments):
                     f.write('\n'.join([d[0] for d in validation_data]))
                     f.write('\n--\n')
                     f.write('\n'.join([d[0] for d in testing_data]))
-                lowest_val_error = val_ler
+                lowest_val_error = val_ler3 / val_mxs
 
             train_losses.append(train_cost)
-            train_errors.append(train_ler2)
+            train_errors.append(train_ler3 / train_mxs)
             val_losses.append(val_cost)
-            val_errors.append(val_ler2)
+            val_errors.append(val_ler3 / val_mxs)
             plot(train_losses, val_losses, train_errors, val_errors, "{}/".format(model_folder_name))
             print(log)
 
@@ -344,6 +344,26 @@ def train(gpu, arguments):
                                                     training_inputs_std, mode='testing')):
             d = session.run(decoded[0], feed_dict={
                 inputs: test_inputs, seq_len : test_seq_len,
+                input_dropout_keep: 1,
+                output_dropout_keep: 1,
+                state_dropout_keep: 1,
+                affine_dropout_keep: 1
+            })
+            #str_decoded = ''.join([chr(x) for x in np.asarray(d[1]) + FIRST_INDEX])
+            str_decoded = ''.join([int_to_char[x] for x in np.asarray(d[1])])
+            # Replacing blank label to none
+            str_decoded = str_decoded.replace(chr(ord('z') + 1), '<BLANK>')
+            # Replacing space label to space
+            str_decoded = str_decoded.replace('<space>', ' ')
+            print('Decoded:\n{}'.format(str_decoded))
+
+        print('Trained:\n{}'.format([d[4] for d in training_data]))#originals[int(training_part * len(all_inputs)):]))
+        for i, (train_inputs, _, train_seq_len, _) in \
+                enumerate(tf_loader.batch_generator(training_inputs, training_targets, batch_size, training_inputs_mean,
+                                                    training_inputs_std)):
+            d = session.run(decoded[0], feed_dict={
+                inputs: train_inputs,
+                seq_len : train_seq_len,
                 input_dropout_keep: 1,
                 output_dropout_keep: 1,
                 state_dropout_keep: 1,

@@ -316,6 +316,27 @@ def train(gpu, arguments):
             plot(train_losses, val_losses, train_errors, val_errors, "{}/".format(model_folder_name))
             print(log)
 
+            # Testing network
+            print('Validation:\n{}'.format([d[4] for d in validation_data]))#originals[int(training_part * len(all_inputs)):]))
+            for i, (test_inputs, _, test_seq_len, _) in \
+                    enumerate(tf_loader.batch_generator(validation_inputs, validation_targets, batch_size, training_inputs_mean,
+                                                        training_inputs_std, mode='validation')):
+                d = session.run(decoded[0], feed_dict={
+                    inputs: test_inputs,
+                    seq_len : test_seq_len,
+                    input_dropout_keep: 1,
+                    output_dropout_keep: 1,
+                    state_dropout_keep: 1,
+                    affine_dropout_keep: 1
+                })
+                #str_decoded = ''.join([chr(x) for x in np.asarray(d[1]) + FIRST_INDEX])
+                str_decoded = ''.join([int_to_char[x] for x in np.asarray(d[1])])
+                # Replacing blank label to none
+                str_decoded = str_decoded.replace(chr(ord('z') + 1), '<BLANK>')
+                # Replacing space label to space
+                str_decoded = str_decoded.replace('<space>', ' ')
+                print('Decoded:\n{}'.format(str_decoded))
+
         # Testing network
         print('Validation:\n{}'.format([d[4] for d in validation_data]))#originals[int(training_part * len(all_inputs)):]))
         for i, (test_inputs, _, test_seq_len, _) in \

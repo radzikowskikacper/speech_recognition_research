@@ -8,6 +8,7 @@ import numpy as np, matplotlib.pyplot as plt
 from six.moves import xrange as range
 from python_speech_features import mfcc
 from random import shuffle
+from matplotlib.ticker import FormatStrFormatter
 
 from feature_extraction import extraction
 from data_handler.loaders import tf_loader
@@ -20,7 +21,7 @@ def plot(train_losses, val_losses, train_errors, val_errors, fname):
     val_loss_line, = plt.plot(np.arange(1, len(val_losses) + 1), val_losses, label='Validation loss')
     plt.legend(handles=[train_loss_line, val_loss_line])
     plt.xlabel('Epoch')
-    plt.ylabel('Loss')
+    plt.ylabel('CTC Loss')
     plt.grid(True)
     plt.savefig("{}losses.png".format(fname))
     plt.close()
@@ -28,6 +29,7 @@ def plot(train_losses, val_losses, train_errors, val_errors, fname):
     train_err_line, = plt.plot(np.arange(1, len(train_errors) + 1), train_errors, label='Training error')
     val_err_line, = plt.plot(np.arange(1, len(val_errors) + 1), val_errors, label='Validation error')
     plt.legend(handles = [train_err_line, val_err_line])
+    #plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%d %'))
     plt.xlabel('Epoch')
     plt.ylabel('Error')
     plt.grid(True)
@@ -89,11 +91,11 @@ def load_data(num_examples, training_part, testing_part, shuffle_count = 0, sort
     #validation_data = training_data
     validation_inputs = [d[2] for d in validation_data]
     validation_targets = [d[3] for d in validation_data]
-    #validation_targets = np.array([np.array([1, 2, 3, 4, 5]),
-    #                               np.array([2, 3, 4, 5, 6]),
-    #                                        np.array([3, 4, 5, 6, 7]),
-    #                                                 np.array([4, 5, 6, 7, 8]),
-    #                                                          np.array([5, 6, 7, 8, 9, 10])])
+    #validation_targets = np.array([np.array([10, 20, 30, 40, 50]),
+    #                               np.array([0] * 1000000),
+    #                                        np.array([0] * 1000000),
+    #                                                 np.array([0] * 1000000),
+    #                                                          np.array([0] * 1000000)])
 
     return training_data, training_inputs, training_targets, training_inputs_mean, training_inputs_std, validation_data, \
            validation_inputs, validation_targets, testing_data, testing_inputs, testing_targets, int_to_char, num_classes
@@ -211,9 +213,9 @@ def train(gpu, arguments):
         # (it's slower but you'll get better results)
         decoded, log_prob = tf.nn.ctc_greedy_decoder(logits, seq_len)
         #decoded = sparse_tuple_from(np.array([[1, 2, 3, 4, 5],
-        #                  [2, 3, 4, 5, 6],
-        #                  [3, 4, 5, 6, 7],
-        #                  [4, 5, 6, 7, 8],
+        #                                [0] * 1000000,
+        #                                      [0] * 1000000,
+        #                                      [0] * 1000000,
         #                  [0] * 1000000]))
         #decoded = [tf.SparseTensor(decoded[0], decoded[1], decoded[2])]
         casted_hypothesis = tf.cast(decoded[0], tf.int32)
@@ -247,10 +249,8 @@ def train(gpu, arguments):
         dense_hypothesis_lengths = [tf.to_float(tf.shape(i)[0]) for i in tf.unstack(dense_hypothesis, batch_size)]
         dense_targets_lengths = [tf.to_float(tf.shape(i)[0]) for i in tf.unstack(dense_targets, batch_size)]
         ler2 = tf.edit_distance(casted_hypothesis, targets, False)
-        #ler2 /= tf.maximum(dense_targets_lengths, dense_hypothesis_lengths)
         ler2 = tf.reduce_sum(ler2)
         ler2 /= tf.reduce_sum(tf.maximum(dense_targets_lengths, dense_hypothesis_lengths))
-        #ler2 = tf.reduce_mean(ler2)
 
         ler3 = tf.reduce_sum(tf.edit_distance(casted_hypothesis, targets, False))
         max_lengths = tf.reduce_sum(tf.maximum(dense_targets_lengths, dense_hypothesis_lengths))
@@ -285,7 +285,7 @@ def train(gpu, arguments):
                         state_dropout_keep: state_dropout_keep_prob,
                         affine_dropout_keep: affine_dropout_keep_prob}
                 session.run(optimizer, feed)
-                batch_cost, lerr, lerr2, lerr3, mxs, dh, dt = session.run([cost, ler, ler2, ler3, max_lengths, dense_hypothesis, dense_targets], feed)
+                batch_cost, lerr, lerr2, lerr3, dh, dt = session.run([cost, ler, ler2, ler3, dense_hypothesis, dense_targets], feed)
                 train_cost += batch_cost#*batch_size
                 train_ler += lerr#*batch_size
                 train_ler2 += lerr2
@@ -325,9 +325,12 @@ def train(gpu, arguments):
             val_ler /= div
             val_ler2 /= div
 
+            final_training_error = train_ler3 / train_mxs
+            final_validation_error = val_ler3 / val_mxs
             log = "E: {}/{}, Tr_cost: {:.3f}, Tr_err: {:.1f}%, Tr_err3: {:.1f}%, Val_cost: {:.3f}, Val_err: {:.1f}%, Val_err3: {:.1f}%, time: {:.3f} s - - -" \
                   " GPU: {}, H: {}, L: {}, BS: {}, LR: {}, M: {}, Ex: {}, Dr-keep: {} / {} / {} / {}, Data: {:.3f} / {:.3f} / {:.3f}, Shuffle: {}"\
-                .format(curr_epoch+1, num_epochs, train_cost, train_ler * 100, train_ler3 / train_mxs * 100, val_cost, val_ler * 100, val_ler3 / val_mxs * 100, time.time() - start,
+                .format(curr_epoch+1, num_epochs, train_cost, train_ler * 100, final_training_error * 100, val_cost,
+                        val_ler * 100, final_validation_error* 100, time.time() - start,
                              gpu, num_hidden, num_layers, batch_size, initial_learning_rate, momentum, num_examples,
                              input_dropout_keep_prob, output_dropout_keep_prob, state_dropout_keep_prob,
                              affine_dropout_keep_prob, training_part, testing_part,
@@ -346,12 +349,13 @@ def train(gpu, arguments):
                 lowest_val_error = val_ler3 / val_mxs
 
             train_losses.append(train_cost)
-            train_errors.append(train_ler3 / train_mxs)
+            train_errors.append(final_training_error)
             val_losses.append(val_cost)
-            val_errors.append(val_ler3 / val_mxs)
+            val_errors.append(final_validation_error)
             plot(train_losses, val_losses, train_errors, val_errors, "{}/".format(model_folder_name))
             print(log)
 
+            continue
             # Testing network
             #print('Validation:\n{}'.format([d[4] for d in validation_data]))#originals[int(training_part * len(all_inputs)):]))
             for i, (test_inputs, _, test_seq_len, _) in \

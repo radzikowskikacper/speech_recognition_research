@@ -12,7 +12,7 @@ from random import shuffle
 from feature_extraction import extraction
 from data_handler.loaders import tf_loader
 from .utils import maybe_download as maybe_download
-from .utils import sparse_tuple_from as sparse_tuple_from
+from .utils import sparse_tuple_from as sparse_tuple_from, calculate_error
 from .utils import get_total_params_num
 
 def plot(train_losses, val_losses, train_errors, val_errors, fname):
@@ -89,6 +89,11 @@ def load_data(num_examples, training_part, testing_part, shuffle_count = 0, sort
     #validation_data = training_data
     validation_inputs = [d[2] for d in validation_data]
     validation_targets = [d[3] for d in validation_data]
+    #validation_targets = np.array([np.array([1, 2, 3, 4, 5]),
+    #                               np.array([2, 3, 4, 5, 6]),
+    #                                        np.array([3, 4, 5, 6, 7]),
+    #                                                 np.array([4, 5, 6, 7, 8]),
+    #                                                          np.array([5, 6, 7, 8, 9, 10])])
 
     return training_data, training_inputs, training_targets, training_inputs_mean, training_inputs_std, validation_data, \
            validation_inputs, validation_targets, testing_data, testing_inputs, testing_targets, int_to_char, num_classes
@@ -205,14 +210,39 @@ def train(gpu, arguments):
         # Option 2: tf.nn.ctc_beam_search_decoder
         # (it's slower but you'll get better results)
         decoded, log_prob = tf.nn.ctc_greedy_decoder(logits, seq_len)
-
+        #decoded = sparse_tuple_from(np.array([[1, 2, 3, 4, 5],
+        #                  [2, 3, 4, 5, 6],
+        #                  [3, 4, 5, 6, 7],
+        #                  [4, 5, 6, 7, 8],
+        #                  [0] * 1000000]))
+        #decoded = [tf.SparseTensor(decoded[0], decoded[1], decoded[2])]
         casted_hypothesis = tf.cast(decoded[0], tf.int32)
         # Inaccuracy: label error rate
 
         ler = tf.reduce_mean(tf.edit_distance(casted_hypothesis, targets), name='error_rate')
 
-        dense_targets = tf.sparse_to_dense(targets.indices, targets.dense_shape, targets.values)
-        dense_hypothesis = tf.sparse_to_dense(decoded[0].indices, decoded[0].dense_shape, decoded[0].values)
+        dense_targets = tf.sparse_to_dense(targets.indices, targets.dense_shape, targets.values, default_value=-1)
+        dense_hypothesis = tf.sparse_to_dense(decoded[0].indices, decoded[0].dense_shape, decoded[0].values, default_value=-1)
+
+        '''
+        dense_hypothesis2 = []
+        i = tf.constant(0)
+        while_condition = lambda i: tf.less(i, tf.shape(dense_hypothesis)[0])
+
+        def body(i):
+            # do something here which you want to do in your loop
+            dense_hypothesis2[i] = 5#append(tf.shape(dense_hypothesis))
+            # increment i
+            return [tf.add(i, 1)]
+
+        # do the loop:
+        r = tf.while_loop(while_condition, body, [i])
+        #for i in tf.range(tf.to_int32(tf.shape(dense_hypothesis)[0])):
+        #    dense_hypothesis2.append(tf.shape(dense_hypothesis))#tf.where(tf.equal(tf.unstack(dense_hypothesis)[i], -1)))
+
+        tmp_indices = tf.where(tf.equal(dense_hypothesis, -1))
+        #dense_hypothesis2 = tf.segment_min(tmp_indices[:, 1], tmp_indices[:, 0])
+        '''
 
         dense_hypothesis_lengths = [tf.to_float(tf.shape(i)[0]) for i in tf.unstack(dense_hypothesis, batch_size)]
         dense_targets_lengths = [tf.to_float(tf.shape(i)[0]) for i in tf.unstack(dense_targets, batch_size)]
@@ -223,7 +253,7 @@ def train(gpu, arguments):
         #ler2 = tf.reduce_mean(ler2)
 
         ler3 = tf.reduce_sum(tf.edit_distance(casted_hypothesis, targets, False))
-        maxs = tf.reduce_sum(tf.maximum(dense_targets_lengths, dense_hypothesis_lengths))
+        max_lengths = tf.reduce_sum(tf.maximum(dense_targets_lengths, dense_hypothesis_lengths))
 
         print("Totally {} trainable parameters".format(get_total_params_num()))
 
@@ -255,12 +285,15 @@ def train(gpu, arguments):
                         state_dropout_keep: state_dropout_keep_prob,
                         affine_dropout_keep: affine_dropout_keep_prob}
                 session.run(optimizer, feed)
-                batch_cost, lerr, lerr2, lerr3, mxs = session.run([cost, ler, ler2, ler3, maxs], feed)
+                batch_cost, lerr, lerr2, lerr3, mxs, dh, dt = session.run([cost, ler, ler2, ler3, max_lengths, dense_hypothesis, dense_targets], feed)
                 train_cost += batch_cost#*batch_size
                 train_ler += lerr#*batch_size
                 train_ler2 += lerr2
-                train_ler3 += lerr3
-                train_mxs += mxs
+
+                levsum, lensum = calculate_error(dh, dt)
+                train_ler3 += levsum
+                train_mxs += lensum
+
             div = len(training_inputs) // batch_size
             train_cost /= div
             train_ler /= div#len(training_inputs)
@@ -278,20 +311,23 @@ def train(gpu, arguments):
                             state_dropout_keep: 1,
                             affine_dropout_keep: 1
                             }
-                v_cost, v_ler, v_ler2, v_ler3, v_mxs = session.run([cost, ler, ler2, ler3, maxs], feed_dict=val_feed)
+                v_cost, v_ler, v_ler2, v_ler3, dh, dt= session.run([cost, ler, ler2, ler3, dense_hypothesis, dense_targets], feed_dict=val_feed)
                 val_cost += v_cost#*batch_size
                 val_ler += v_ler#*batch_size
                 val_ler2 += v_ler2
-                val_mxs += v_mxs
-                val_ler3 += v_ler3
+
+                levsum, lensum = calculate_error(dh, dt)
+                val_mxs += lensum
+                val_ler3 += levsum
+
             div = len(validation_inputs) // batch_size
             val_cost /= div
             val_ler /= div
             val_ler2 /= div
 
-            log = "E: {}/{}, Tr_cost: {:.3f}, Tr_err: {:.3f}, Tr_err3: {:.3f}, Val_cost: {:.3f}, Val_err: {:.3f}, Val_err3: {:.3f}, time: {:.3f} s - - -" \
+            log = "E: {}/{}, Tr_cost: {:.3f}, Tr_err: {:.1f}%, Tr_err3: {:.1f}%, Val_cost: {:.3f}, Val_err: {:.1f}%, Val_err3: {:.1f}%, time: {:.3f} s - - -" \
                   " GPU: {}, H: {}, L: {}, BS: {}, LR: {}, M: {}, Ex: {}, Dr-keep: {} / {} / {} / {}, Data: {:.3f} / {:.3f} / {:.3f}, Shuffle: {}"\
-                .format(curr_epoch+1, num_epochs, train_cost, train_ler, train_ler3 / train_mxs, val_cost, val_ler, val_ler3 / val_mxs, time.time() - start,
+                .format(curr_epoch+1, num_epochs, train_cost, train_ler * 100, train_ler3 / train_mxs * 100, val_cost, val_ler * 100, val_ler3 / val_mxs * 100, time.time() - start,
                              gpu, num_hidden, num_layers, batch_size, initial_learning_rate, momentum, num_examples,
                              input_dropout_keep_prob, output_dropout_keep_prob, state_dropout_keep_prob,
                              affine_dropout_keep_prob, training_part, testing_part,
@@ -317,7 +353,7 @@ def train(gpu, arguments):
             print(log)
 
             # Testing network
-            print('Validation:\n{}'.format([d[4] for d in validation_data]))#originals[int(training_part * len(all_inputs)):]))
+            #print('Validation:\n{}'.format([d[4] for d in validation_data]))#originals[int(training_part * len(all_inputs)):]))
             for i, (test_inputs, _, test_seq_len, _) in \
                     enumerate(tf_loader.batch_generator(validation_inputs, validation_targets, batch_size, training_inputs_mean,
                                                         training_inputs_std, mode='validation')):
@@ -335,7 +371,7 @@ def train(gpu, arguments):
                 str_decoded = str_decoded.replace(chr(ord('z') + 1), '<BLANK>')
                 # Replacing space label to space
                 str_decoded = str_decoded.replace('<space>', ' ')
-                print('Decoded:\n{}'.format(str_decoded))
+                #print('Decoded:\n{}'.format(str_decoded))
 
         # Testing network
         print('Validation:\n{}'.format([d[4] for d in validation_data]))#originals[int(training_part * len(all_inputs)):]))

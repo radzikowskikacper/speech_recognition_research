@@ -217,8 +217,10 @@ def train(gpu, arguments):
         dense_hypothesis_lengths = [tf.to_float(tf.shape(i)[0]) for i in tf.unstack(dense_hypothesis, batch_size)]
         dense_targets_lengths = [tf.to_float(tf.shape(i)[0]) for i in tf.unstack(dense_targets, batch_size)]
         ler2 = tf.edit_distance(casted_hypothesis, targets, False)
-        ler2 /= tf.maximum(dense_targets_lengths, dense_hypothesis_lengths)
-        ler2 = tf.reduce_mean(ler2)
+        #ler2 /= tf.maximum(dense_targets_lengths, dense_hypothesis_lengths)
+        ler2 = tf.reduce_sum(ler2)
+        ler2 /= tf.reduce_sum(tf.maximum(dense_targets_lengths, dense_hypothesis_lengths))
+        #ler2 = tf.reduce_mean(ler2)
 
         print("Totally {} trainable parameters".format(get_total_params_num()))
 

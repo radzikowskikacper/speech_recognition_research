@@ -250,13 +250,13 @@ def train(gpu, arguments):
                         state_dropout_keep: state_dropout_keep_prob,
                         affine_dropout_keep: affine_dropout_keep_prob}
                 session.run(optimizer, feed)
-                batch_cost, lerr2 = session.run([cost, ler2], feed)
+                batch_cost, lerr, lerr2 = session.run([cost, ler, ler2], feed)
                 train_cost += batch_cost#*batch_size
-                #train_ler += lerr#*batch_size
+                train_ler += lerr#*batch_size
                 train_ler2 += lerr2
             div = len(training_inputs) // batch_size
             train_cost /= div
-            #train_ler /= div#len(training_inputs)
+            train_ler /= div#len(training_inputs)
             train_ler2 /= div
 
             val_cost = val_ler = val_ler2 = 0
@@ -271,18 +271,18 @@ def train(gpu, arguments):
                             state_dropout_keep: 1,
                             affine_dropout_keep: 1
                             }
-                v_cost, v_ler2 = session.run([cost, ler2], feed_dict=val_feed)
+                v_cost, v_ler, v_ler2 = session.run([cost, ler, ler2], feed_dict=val_feed)
                 val_cost += v_cost#*batch_size
-                #val_ler += v_ler#*batch_size
+                val_ler += v_ler#*batch_size
                 val_ler2 += v_ler2
             div = len(validation_inputs) // batch_size
             val_cost /= div
-            #val_ler /= div
+            val_ler /= div
             val_ler2 /= div
 
-            log = "E: {}/{}, Tr_cost: {:.3f}, Tr_err2: {:.3f}, Val_cost: {:.3f}, Val_err2: {:.3f}, time: {:.3f} s - - -" \
+            log = "E: {}/{}, Tr_cost: {:.3f}, Tr_err: {:.3f}, Tr_err2: {:.3f}, Val_cost: {:.3f}, Val_err: {:.3f}, Val_err2: {:.3f}, time: {:.3f} s - - -" \
                   " GPU: {}, H: {}, L: {}, BS: {}, LR: {}, M: {}, Ex: {}, Dr-keep: {} / {} / {} / {}, Data: {:.3f} / {:.3f} / {:.3f}, Shuffle: {}"\
-                .format(curr_epoch+1, num_epochs, train_cost, train_ler2, val_cost, val_ler2, time.time() - start,
+                .format(curr_epoch+1, num_epochs, train_cost, train_ler, train_ler2, val_cost, val_ler, val_ler2, time.time() - start,
                              gpu, num_hidden, num_layers, batch_size, initial_learning_rate, momentum, num_examples,
                              input_dropout_keep_prob, output_dropout_keep_prob, state_dropout_keep_prob,
                              affine_dropout_keep_prob, training_part, testing_part,
@@ -301,9 +301,9 @@ def train(gpu, arguments):
                 lowest_val_error = val_ler
 
             train_losses.append(train_cost)
-            train_errors.append(train_ler)
+            train_errors.append(train_ler2)
             val_losses.append(val_cost)
-            val_errors.append(val_ler)
+            val_errors.append(val_ler2)
             plot(train_losses, val_losses, train_errors, val_errors, "{}/".format(model_folder_name))
             print(log)
 

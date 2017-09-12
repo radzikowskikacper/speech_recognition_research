@@ -222,6 +222,9 @@ def train(gpu, arguments):
         ler2 /= tf.reduce_sum(tf.maximum(dense_targets_lengths, dense_hypothesis_lengths))
         #ler2 = tf.reduce_mean(ler2)
 
+        ler3 = tf.reduce_sum(tf.edit_distance(casted_hypothesis, targets, False))
+        maxs = tf.reduce_sum(tf.maximum(dense_targets_lengths, dense_hypothesis_lengths))
+
         print("Totally {} trainable parameters".format(get_total_params_num()))
 
     config = tf.ConfigProto()
@@ -238,7 +241,7 @@ def train(gpu, arguments):
                     # training_inputs_std, target_parser=sparse_tuple_from, mode='testing')
         lowest_val_error = 1000
         for curr_epoch in range(num_epochs):
-            train_cost = train_ler =  train_ler2 = 0
+            train_cost = train_ler = train_ler2 = train_ler3 = train_mxs = 0
             start = time.time()
 
             for train_inputs, train_targets, train_seq_len, _ in \
@@ -252,16 +255,18 @@ def train(gpu, arguments):
                         state_dropout_keep: state_dropout_keep_prob,
                         affine_dropout_keep: affine_dropout_keep_prob}
                 session.run(optimizer, feed)
-                batch_cost, lerr, lerr2 = session.run([cost, ler, ler2], feed)
+                batch_cost, lerr, lerr2, lerr3, mxs = session.run([cost, ler, ler2, ler3, maxs], feed)
                 train_cost += batch_cost#*batch_size
                 train_ler += lerr#*batch_size
                 train_ler2 += lerr2
+                train_ler3 += lerr3
+                train_mxs += mxs
             div = len(training_inputs) // batch_size
             train_cost /= div
             train_ler /= div#len(training_inputs)
             train_ler2 /= div
 
-            val_cost = val_ler = val_ler2 = 0
+            val_cost = val_ler = val_ler2 = val_ler3 = val_mxs = 0
             for v_inputs, v_targets, v_seq_len, _ in \
                     tf_loader.batch_generator(validation_inputs, validation_targets, batch_size, training_inputs_mean,
                                               training_inputs_std, target_parser=sparse_tuple_from, mode='validation'):
@@ -273,18 +278,20 @@ def train(gpu, arguments):
                             state_dropout_keep: 1,
                             affine_dropout_keep: 1
                             }
-                v_cost, v_ler, v_ler2 = session.run([cost, ler, ler2], feed_dict=val_feed)
+                v_cost, v_ler, v_ler2, v_ler3, v_mxs = session.run([cost, ler, ler2, ler3, maxs], feed_dict=val_feed)
                 val_cost += v_cost#*batch_size
                 val_ler += v_ler#*batch_size
                 val_ler2 += v_ler2
+                val_mxs += v_mxs
+                val_ler3 += v_ler3
             div = len(validation_inputs) // batch_size
             val_cost /= div
             val_ler /= div
             val_ler2 /= div
 
-            log = "E: {}/{}, Tr_cost: {:.3f}, Tr_err: {:.3f}, Tr_err2: {:.3f}, Val_cost: {:.3f}, Val_err: {:.3f}, Val_err2: {:.3f}, time: {:.3f} s - - -" \
+            log = "E: {}/{}, Tr_cost: {:.3f}, Tr_err: {:.3f}, Tr_err2: {:.3f}, Tr_err3: {:.3f}, Val_cost: {:.3f}, Val_err: {:.3f}, Val_err2: {:.3f}, Val_err3: {:.3f}, time: {:.3f} s - - -" \
                   " GPU: {}, H: {}, L: {}, BS: {}, LR: {}, M: {}, Ex: {}, Dr-keep: {} / {} / {} / {}, Data: {:.3f} / {:.3f} / {:.3f}, Shuffle: {}"\
-                .format(curr_epoch+1, num_epochs, train_cost, train_ler, train_ler2, val_cost, val_ler, val_ler2, time.time() - start,
+                .format(curr_epoch+1, num_epochs, train_cost, train_ler, train_ler2, train_ler3 / train_mxs, val_cost, val_ler, val_ler2, val_ler3 / val_mxs, time.time() - start,
                              gpu, num_hidden, num_layers, batch_size, initial_learning_rate, momentum, num_examples,
                              input_dropout_keep_prob, output_dropout_keep_prob, state_dropout_keep_prob,
                              affine_dropout_keep_prob, training_part, testing_part,

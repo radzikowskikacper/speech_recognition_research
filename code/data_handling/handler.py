@@ -1,4 +1,4 @@
-from .loaders.erj import erj_loader
+from .loading.kaldi_targeted import erj_loader
 from .formatters.kaldi import *
 
 

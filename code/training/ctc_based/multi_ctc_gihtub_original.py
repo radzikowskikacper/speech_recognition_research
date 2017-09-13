@@ -4,12 +4,12 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 import time
 
 import tensorflow as tf
-import scipy.io.wavfile as wav
 import numpy as np
 
 from six.moves import xrange as range
@@ -19,8 +19,8 @@ try:
 except ImportError:
     print("Failed to import python_speech_features.\n Try pip install python_speech_features.")
     raise ImportError
-from .utils import sparse_tuple_from as sparse_tuple_from
-from .utils import pad_sequences as pad_sequences
+from utils.utils import sparse_tuple_from as sparse_tuple_from
+from utils.utils import pad_sequences as pad_sequences
 
 def fake_data(num_examples, num_features, num_labels, min_size = 10, max_size=100):
 
@@ -139,7 +139,7 @@ with tf.Session(graph=graph) as session:
 
 
     for curr_epoch in range(num_epochs):
-        train_cost = train_ler = 0
+        train_cost = train_ler = train_cost1 = train_ler1 = 0
         start = time.time()
 
         for batch in range(num_batches_per_epoch):
@@ -158,15 +158,26 @@ with tf.Session(graph=graph) as session:
                     targets: batch_train_targets,
                     seq_len: batch_train_seq_len}
 
-            batch_cost, _ = session.run([cost, optimizer], feed)
-            train_cost += batch_cost*batch_size
-            train_ler += session.run(ler, feed_dict=feed)*batch_size
+            train_ler1_part = session.run(ler, feed_dict=feed)*batch_size
+            train_ler1_part = session.run(ler, feed_dict=feed)*batch_size
+            train_ler1 += train_ler1_part
+            train_cost1_part = session.run(cost, feed)*batch_size
+            train_cost1_part = session.run(cost, feed)*batch_size
+            train_cost1 += train_cost1_part
+            session.run(optimizer, feed)
+            train_ler_part = session.run(ler, feed_dict=feed)*batch_size
+            train_ler_part = session.run(ler, feed_dict=feed)*batch_size
+            train_ler += train_ler_part
+            train_cost_part = session.run(cost, feed)*batch_size
+            train_cost_part = session.run(cost, feed)*batch_size
+            train_cost += train_cost_part
 
+            #print('')
 
         # Shuffle the data
         shuffled_indexes = np.random.permutation(num_examples)
-        train_inputs = train_inputs[shuffled_indexes]
-        train_targets = train_targets[shuffled_indexes]
+        #train_inputs = train_inputs[shuffled_indexes]
+        #train_targets = train_targets[shuffled_indexes]
 
         # Metrics mean
         train_cost /= num_examples

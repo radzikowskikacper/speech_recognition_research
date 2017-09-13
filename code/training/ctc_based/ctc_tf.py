@@ -1,21 +1,19 @@
-import time, os
-import tensorflow as tf
-import scipy.io.wavfile as wav
+import os
+import time
+
 import matplotlib
+import tensorflow as tf
+
 matplotlib.use('agg')
 import numpy as np, matplotlib.pyplot as plt
 
 from six.moves import xrange as range
-from python_speech_features import mfcc
 from random import shuffle
-from matplotlib.ticker import FormatStrFormatter
 from datetime import datetime
 
-from feature_extraction import extraction
-from data_handler.loaders import tf_loader
-from .utils import maybe_download as maybe_download
-from .utils import sparse_tuple_from as sparse_tuple_from, calculate_error
-from .utils import get_total_params_num
+from data_handling.loading import ctc_targeted
+from utils.utils import sparse_tuple_from as sparse_tuple_from, calculate_error
+from utils.utils import get_total_params_num
 
 ctrlc = False
 dataset_fname = 'datasets.txt'
@@ -48,7 +46,7 @@ def plot(train_losses, val_losses, train_errors, val_errors, fname):
 def divide_data(num_examples, training_part, testing_part, shuffle_count = 0, sort_by_length = False):
     SPACE_TOKEN = '<space>'
 
-    data = tf_loader.load_data_from_file('../data/umeerj/data_both_mfcc.dat', [20, 13], num_examples)
+    data = ctc_targeted.load_data_from_file('../data/umeerj/data_both_mfcc.dat', [20, 13], num_examples)
     print('Loaded {} data rows'.format(len(data)))
     data = sorted(data, key=lambda x: x[2].shape[0], reverse=True)
 
@@ -63,7 +61,7 @@ def divide_data(num_examples, training_part, testing_part, shuffle_count = 0, so
 
     # fs, audio = wav.read('/home/kapi/projects/research/phd/asr/data/umeerj/ume-erj/wav/JE/DOS/F01/S6_001.wav')
     # data[0] = (data[0][0], mfcc(audio, samplerate=fs), data[0][2], data[0][3])
-    alphabet = tf_loader.get_alphabet2([d[4] for d in data])
+    alphabet = ctc_targeted.get_alphabet2([d[4] for d in data])
     int_to_char = {i: char for i, char in enumerate([SPACE_TOKEN] + alphabet)}
     char_to_int = {char: i for i, char in int_to_char.items()}
     num_classes = len(int_to_char) + 1
@@ -228,8 +226,8 @@ def test_network(session, test_inputs, test_targets, batch_size, training_inputs
         i = 0
         f.write(mode + '\n')
         for test_inputs, _, test_seq_len, _ in \
-                tf_loader.batch_generator(test_inputs, test_targets, batch_size, training_inputs_mean,
-                                          training_inputs_std, mode=mode):
+                ctc_targeted.batch_generator(test_inputs, test_targets, batch_size, training_inputs_mean,
+                                             training_inputs_std, mode=mode):
             d, dh = session.run([decoded[0], dense_hypothesis], {inputs: test_inputs,
                                          seq_len: test_seq_len,
                                          input_dropout_keep: 1,
@@ -311,8 +309,8 @@ def train(arguments):
             start = time.time()
 
             for train_inputs, train_targets, train_seq_len, _ in \
-                    tf_loader.batch_generator(training_inputs, training_targets, batch_size, training_inputs_mean,
-                                              training_inputs_std, target_parser = sparse_tuple_from):
+                    ctc_targeted.batch_generator(training_inputs, training_targets, batch_size, training_inputs_mean,
+                                                 training_inputs_std, target_parser = sparse_tuple_from):
                 if ctrlc: break
 
                 feed = {inputs: train_inputs,
@@ -338,8 +336,8 @@ def train(arguments):
 
             val_cost = val_ler = val_max_lengths = 0
             for v_inputs, v_targets, v_seq_len, _ in \
-                    tf_loader.batch_generator(validation_inputs, validation_targets, batch_size, training_inputs_mean,
-                                              training_inputs_std, target_parser = sparse_tuple_from, mode='validation'):
+                    ctc_targeted.batch_generator(validation_inputs, validation_targets, batch_size, training_inputs_mean,
+                                                 training_inputs_std, target_parser = sparse_tuple_from, mode='validation'):
                 if ctrlc: break
 
                 v_cost, dh, dt = session.run([cost, dense_hypothesis, dense_targets],
@@ -421,8 +419,8 @@ def load_and_test():
         #print('\n'.join([n.name for n in graph.as_graph_def().node]))
 
         for i, (test_input, _, test_seq_len, _) in \
-                enumerate(tf_loader.batch_generator(testing_inputs, testing_targets, batch_size, training_inputs_mean,
-                                                    training_inputs_std)):
+                enumerate(ctc_targeted.batch_generator(testing_inputs, testing_targets, batch_size, training_inputs_mean,
+                                                       training_inputs_std)):
             d = sess.run(decoded, feed_dict={
                 input_samples: test_input, input_sequence_length: test_seq_len, dropout_keep:1
             })

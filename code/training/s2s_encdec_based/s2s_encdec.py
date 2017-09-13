@@ -1,6 +1,6 @@
 import tensorflow as tf, numpy as np, time, os
 from tensorflow.python.layers.core import Dense
-from data_handler.loaders import tf_loader
+from data_handing.loading import tf_loader
 from random import shuffle
 
 def get_model_inputs(number_of_features):

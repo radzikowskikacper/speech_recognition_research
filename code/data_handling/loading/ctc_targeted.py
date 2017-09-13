@@ -1,5 +1,5 @@
 import os, numpy as np, traceback
-from feature_extraction import extraction
+from feature_extraction import mfcc
 from threading import Thread, Lock
 from collections import defaultdict
 
@@ -56,6 +56,39 @@ def batch_generator(samples, targets, batch_size, samples_mean, samples_std, tar
             if target_parser:
                 labels = target_parser(labels)
             batches_saves[mode].append((rsamples, labels, samples_lengths, labels_lengths))
+            yield rsamples, labels, samples_lengths, targets[batch_start:batch_start + batch_size]
+
+def batch_generator2(samples, targets, batch_size, samples_mean, samples_std, n_steps, target_parser = None, mode ='training'):
+    if mode in batches_saves:
+        for line in batches_saves[mode]:
+            yield line
+    else:
+        samples_per_batch = batch_size * n_steps
+        samples_stream = []
+        for sline in samples:
+            samples_stream.extend(sline)
+        targets_stream = []
+        for tline in targets:
+            targets_stream.extend(tline)
+
+
+        rsamples = []
+        labels = []
+        while True:
+            pass
+
+        for batch_i in range(len(samples) // batch_size):
+            batch_start = batch_size * batch_i
+            rsamples = samples[batch_start:batch_start + batch_size]
+            rsamples = pad_data2(rsamples, 0)
+            rsamples = (rsamples - samples_mean) / (samples_std)# - samples_min)
+            labels = targets[batch_start:batch_start + batch_size]
+#            labels = pad_data2(labels, 0)
+            samples_lengths = [s.shape[0] for s in rsamples]
+            labels_lengths = [l.shape[0] for l in labels]
+            if target_parser:
+                labels = target_parser(labels)
+            batches_saves[mode].append((rsamples, labels, samples_lengths, labels_lengths))
             yield rsamples, labels, samples_lengths, labels_lengths
 
 def load_data(path):
@@ -94,8 +127,8 @@ def load_data(path):
             if k % 200 == 0 and k > 0:
                 print('[{}] {} %'.format(id, (k - start) / (end - start) * 100))
             try:
-                data[k] = (data[k][0], np.array(extraction.get_librosa_mfcc(data[k][0])).T,
-                           np.array(extraction.get_other_mfcc(data[k][0])), data[k][2], data[k][3])
+                data[k] = (data[k][0], np.array(mfcc.get_librosa_mfcc(data[k][0])).T,
+                           np.array(mfcc.get_other_mfcc(data[k][0])), data[k][2], data[k][3])
             except:
                 print(data[k][0])
                 traceback.print_exc()

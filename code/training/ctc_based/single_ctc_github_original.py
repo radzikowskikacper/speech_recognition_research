@@ -5,10 +5,9 @@ from __future__ import print_function
 
 import time
 
-import tensorflow as tf
-import scipy.io.wavfile as wav
 import numpy as np
-
+import scipy.io.wavfile as wav
+import tensorflow as tf
 from six.moves import xrange as range
 
 try:
@@ -17,9 +16,8 @@ except ImportError:
     print("Failed to import python_speech_features.\n Try pip install python_speech_features.")
     raise ImportError
 
-from .utils import maybe_download as maybe_download
-from .utils import sparse_tuple_from as sparse_tuple_from
-from feature_extraction import extraction
+from utils.utils import sparse_tuple_from as sparse_tuple_from
+from feature_extraction import mfcc
 
 # Constants
 SPACE_TOKEN = '<space>'

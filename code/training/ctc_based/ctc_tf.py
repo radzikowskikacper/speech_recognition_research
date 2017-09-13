@@ -1,9 +1,4 @@
-import os
-import time
-
-import matplotlib
-import tensorflow as tf
-
+import os, time, matplotlib, tensorflow as tf, signal
 matplotlib.use('agg')
 import numpy as np, matplotlib.pyplot as plt
 
@@ -16,6 +11,14 @@ from utils.utils import sparse_tuple_from as sparse_tuple_from, calculate_error
 from utils.utils import get_total_params_num
 
 ctrlc = False
+
+def sigint_handler(signum, frame):
+    print('CTRL+c pressed.\nFinishing training after')
+    global ctrlc
+    ctrlc = True
+
+signal.signal(signal.SIGINT, sigint_handler)
+
 dataset_fname = 'datasets.txt'
 final_outcomes_fname = 'final_outcomes.txt'
 history_fname = 'history.txt'
@@ -224,7 +227,7 @@ def test_network(session, test_inputs, test_targets, batch_size, training_inputs
     with open('{}/{}'.format(model_folder_name, final_outcomes_fname), 'a') as f:
         # Testing network
         i = 0
-        f.write(mode + '\n')
+        f.write('---' + mode + '---\n')
         for test_inputs, _, test_seq_len, _ in \
                 ctc_targeted.batch_generator(test_inputs, test_targets, batch_size, training_inputs_mean,
                                              training_inputs_std, mode=mode):
@@ -330,6 +333,7 @@ def train(arguments):
                 levsum, lensum = calculate_error(dh, dt)
                 train_ler += levsum
                 train_max_lengths += lensum
+            if ctrlc: break
 
             train_ler /= train_max_lengths
             train_cost /= len(training_inputs) // batch_size
@@ -356,9 +360,23 @@ def train(arguments):
                 levsum, lensum = calculate_error(dh, dt)
                 val_max_lengths += lensum
                 val_ler += levsum
+            if ctrlc: break
 
             val_ler /= val_max_lengths
             val_cost /= len(validation_inputs) // batch_size
+
+            if val_ler < lowest_val_error:
+                saver.save(session, model_folder_name + '/model')
+                with open('{}/{}'.format(model_folder_name, params_fname), 'w+') as f:
+                    f.write(str(curr_epoch) + '\n')
+                    f.write(str(val_ler) + '\n' + str(train_ler) + '\n')
+                lowest_val_error = val_ler
+
+            train_losses.append(train_cost)
+            train_errors.append(train_ler)
+            val_losses.append(val_cost)
+            val_errors.append(val_ler)
+            plot(train_losses, val_losses, train_errors, val_errors, "{}/".format(model_folder_name))
 
             log = "E: {}/{}, Tr_cost: {:.3f}, Tr_err: {:.1f}%, Val_cost: {:.3f}, Val_err: {:.1f}%, time: {:.2f} s " \
                   "- - - GPU: {}, H: {}, L: {}, BS: {}, LR: {}, M: {}, Ex: {}, Dr-keep: {} / {} / {} / {}, " \
@@ -371,24 +389,9 @@ def train(arguments):
 
             with open('{}/{}'.format(model_folder_name, history_fname), 'a') as f:
                 f.write(log + '\n')
-
-            if val_ler < lowest_val_error:
-                saver.save(session, model_folder_name + '/model')
-                with open('{}/{}'.format(model_folder_name, params_fname), 'w+') as f:
-                    f.write(str(curr_epoch) + '\n')
-                    f.write(str(val_ler) + '\n' + str(train_ler) + '\n')
-                    #f.write('\n'.join([d[0] for d in validation_data]))
-                    #f.write('\n--\n')
-                    #f.write('\n'.join([d[0] for d in testing_data]))
-                lowest_val_error = val_ler
-
-            train_losses.append(train_cost)
-            train_errors.append(train_ler)
-            val_losses.append(val_cost)
-            val_errors.append(val_ler)
-            plot(train_losses, val_losses, train_errors, val_errors, "{}/".format(model_folder_name))
             print(log)
 
+        print('Testing network')
         test_network(session, validation_inputs, validation_targets, batch_size, training_inputs_mean, training_inputs_std,
                      validation_data, 'validation', decoded, dense_hypothesis, inputs, seq_len, input_dropout_keep,
                      output_dropout_keep, state_dropout_keep, affine_dropout_keep, int_to_char, model_folder_name)
@@ -431,9 +434,3 @@ def load_and_test():
             # Replacing space label to space
             str_decoded = str_decoded.replace('<space>', ' ')
             print('Decoded:\n{}'.format(str_decoded))
-
-def sigint_handler(signum, frame):
-    print('CTRL+c pressed.\nFinishing training')
-
-
-#signal.signal(signal.SIGINT, sigint_handler)

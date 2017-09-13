@@ -5,9 +5,7 @@ import numpy as np
 import tensorflow as tf
 
 class PolicyGradientAgent(object):
-
     def __init__(self, hparams, sess):
-
         # initialization
         self._s = sess
 
@@ -56,7 +54,6 @@ class PolicyGradientAgent(object):
                 self._acts: acts, \
                 self._advantages: advantages }
         self._s.run(self._train, feed_dict=batch_feed)
-
 
 def policy_rollout(env, agent):
     """Run one episode."""

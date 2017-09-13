@@ -378,7 +378,7 @@ def train(arguments):
             val_errors.append(val_ler)
             plot(train_losses, val_losses, train_errors, val_errors, "{}/".format(model_folder_name))
 
-            log = "E: {}/{}, Tr_cost: {:.3f}, Tr_err: {:.1f}%, Val_cost: {:.3f}, Val_err: {:.1f}%, time: {:.2f} s " \
+            log = "E: {}/{}, Tr_loss: {:.3f}, Tr_err: {:.1f}%, Val_loss: {:.3f}, Val_err: {:.1f}%, time: {:.2f} s " \
                   "- - - GPU: {}, H: {}, L: {}, BS: {}, LR: {}, M: {}, Ex: {}, Dr-keep: {} / {} / {} / {}, " \
                   "Data: {:.2f} / {:.2f} / {:.2f}, Shuffle: {}, Sort by length: {}"
             log = log.format(curr_epoch+1, num_epochs, train_cost, train_ler * 100, val_cost, val_ler * 100,

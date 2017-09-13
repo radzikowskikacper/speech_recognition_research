@@ -132,7 +132,7 @@ def create_model(num_features, num_hidden, num_layers, num_classes, initial_lear
     seq_len = tf.placeholder(tf.int32, [None], name='input_sequence_length')
 
     def lstm_cell():
-        cell = tf.contrib.rnn.LSTMCell(num_hidden, state_is_tuple=True)
+        cell = tf.contrib.rnn.LSTMCell(num_hidden, state_is_tuple=True, initializer=tf.contrib.layers.xavier_initializer())
         return tf.contrib.rnn.DropoutWrapper(cell, output_keep_prob=output_dropout_keep,
                                              input_keep_prob=input_dropout_keep,
                                              state_keep_prob=state_dropout_keep)
@@ -149,9 +149,9 @@ def create_model(num_features, num_hidden, num_layers, num_classes, initial_lear
     # Truncated normal with mean 0 and stdev=0.1
     # Tip: Try another initialization
     # see https://www.tensorflow.org/versions/r0.9/api_docs/python/contrib.layers.html#initializers
-    W = tf.Variable(tf.truncated_normal([num_hidden,
-                                         num_classes],
-                                        stddev=0.1), name='W')
+    #W = tf.Variable(tf.truncated_normal([num_hidden, num_classes], stddev=0.1), name='W')
+    W = tf.get_variable("W", shape=[num_hidden, num_classes], initializer=tf.contrib.layers.xavier_initializer())
+
     # Zero initialization
     # Tip: Is tf.zeros_initializer the same?
     b = tf.Variable(tf.constant(0., shape=[num_classes]))

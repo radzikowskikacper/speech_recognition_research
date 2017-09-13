@@ -1,6 +1,6 @@
 import tensorflow as tf, numpy as np, time, os
 from tensorflow.python.layers.core import Dense
-from data_handing.loading import tf_loader
+from data_handling.loading import ctc_targeted
 from random import shuffle
 
 def get_model_inputs(number_of_features):
@@ -134,9 +134,9 @@ def demo(arguments):
     display_step = int(arguments[8])  # Check training loss after every 20 batches
     #'''
     #data = tf_loader.load_data_from_file('data4.dat', 20, samples)#
-    data = tf_loader.load_data('../data/umeerj/ume-erj/')
+    data = ctc_targeted.load_data('../data/umeerj/ume-erj/')
     #data = tf_loader.load_data('../data/umeerj/ume-erj/')
-    alphabet = tf_loader.get_alphabet(data)
+    alphabet = ctc_targeted.get_alphabet(data)
     tokens = ['<PAD>', '<UNK>', '<GO>', '<EOS>']
     int_to_char = {i : char for i, char in enumerate(tokens + alphabet)}
     char_to_int = {char : i for i, char in int_to_char.items()}
@@ -145,7 +145,7 @@ def demo(arguments):
     #data = tf_loader.normalize_data(data)
     #data = tf_loader.pad_data(data, char_to_int)
     print(data[0][1].shape[1])
-    tf_loader.save_data_to_file(data, 'data_both_mfcc.dat')
+    ctc_targeted.save_data_to_file(data, 'data_both_mfcc.dat')
     print(len(data))
     print(char_to_int)
     return
@@ -206,7 +206,7 @@ def demo(arguments):
         sess.run(tf.local_variables_initializer())
         for epoch_i in range(1, epochs + 1):
             for batch_i, (source_batch, target_batch, source_lengths, target_lengths) in enumerate(
-                    tf_loader.batch_generator(training_data, batch_size, char_to_int)):
+                    ctc_targeted.batch_generator(training_data, batch_size, char_to_int)):
                 tstart = time.time()
                 # Training step
                 _, loss, training_accuracy = sess.run(
@@ -223,7 +223,7 @@ def demo(arguments):
                     accs2 = []
                     val_losses = []
 
-                    for j, (testing_source_batch, testing_target_batch, testing_source_lengths, testing_target_lengths) in enumerate(tf_loader.batch_generator(
+                    for j, (testing_source_batch, testing_target_batch, testing_source_lengths, testing_target_lengths) in enumerate(ctc_targeted.batch_generator(
                         training_data, batch_size, char_to_int, 'testing')):
                         validation_loss, validation_accuracy, il = sess.run(
                             [cost, accuracy, inference_logits],

@@ -4,8 +4,8 @@ import tensorflow as tf
 from tensorflow.python.layers.core import Dense
 from . import helper
 
-source_path = 'training/normal_s2s_encdec/data/letters_source.txt'
-target_path = 'training/normal_s2s_encdec/data/letters_target.txt'
+source_path = 'training/s2s_encdec_based/data/letters_source.txt'
+target_path = 'training/s2s_encdec_based/data/letters_target.txt'
 
 source_sentences = helper.load_data(source_path)
 target_sentences = helper.load_data(target_path)

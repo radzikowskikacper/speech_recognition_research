@@ -1,9 +1,4 @@
-#from data_handler.handler import handler
 import os, sys
-#from testing import demo
-
-#h = handler()
-path = os.path.expanduser('~')
 
 if __name__ == '__main__':
     arguments = sys.argv
@@ -11,45 +6,10 @@ if __name__ == '__main__':
         os.environ["CUDA_VISIBLE_DEVICES"] = str(arguments[1])
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 
-    '''
-    from feature_extraction import speaker_dependency
-    speaker_dependency.get_speaker_dependent_features()
-    '''
-
-    #from testing import examples
-    #examples.sim()
-
-    #demo.do_demo()
-    #from feature_extraction import extraction
-    #a = extraction.get_features_vector("/media/kapi/0999786741FF823E/research_data/umeerj/ume-erj/wav/JE/DOS/F01/S6_001.wav")
-
-    #from training import rajs_net
-    #rajs_net.train('../data/umeerj/ume-erj/')
-
     #from training.normal_ctc import ctc_tensorflow_multidata_example
 
-    from training.normal_s2s_encdec import s2s_encdec
-    #s2s_encdec.demo([2, 100, 25, 2, 0.1, 15, 0, 6, 1])#sys.argv[1:])
-    #from training.normal_s2s_encdec import original
-
     from training.normal_ctc import ctc_tensorflow_example
-    if len(arguments) > 2:
-        ctc_tensorflow_example.train(str(arguments[1]), sys.argv[2:])
+    if len(arguments) > 1:
+        ctc_tensorflow_example.train(sys.argv[1:])
     else:
-        #ctc_tensorflow_example.load_and_test()
-        ctc_tensorflow_example.train('def', [2000, 50, 1, 1, 0.0001, 0.9, 70000, 1, 1, 1, 1, 0.7, 0.15, 0, 1])
-    #from training.normal_ctc import ccc
-    #from generating import train
-    #train.main()
-
-    '''
-    h.loader.load_data('{}/projects/research/phd/data/ume-erj'.format(path))
-
-    h.formatter.transformData_Kaldi_easier_tut('{}/projects/research/kaldi'.format(path),
-                                     '{}/projects/research/phd/data/kaldi'.format(path),
-                                     [])
-
-    h.formatter.prepare_training_script_Kaldi('{}/projects/research/kaldi'.format(path),
-                                     '{}/projects/research/phd/data/kaldi'.format(path),
-                                    '{}/projects/research/phd/data/kaldi/trainer.sh'.format(path))
-    '''
+        ctc_tensorflow_example.train(['default', 12, 50, 1, 2, 0.005, 0.9, 10, 1, 1, 1, 1, 0.6, 0.2, 0, 0])

@@ -106,7 +106,7 @@ def divide_data(num_examples, training_part, testing_part, shuffle_count = 0, so
     #                                                          np.array([0] * 1000000)])
 
     return training_data, training_inputs, training_targets, training_inputs_mean, training_inputs_std, validation_data, \
-           validation_inputs, validation_targets, testing_data, testing_inputs, testing_targets, int_to_char, num_classes
+           validation_inputs, validation_targets, testing_data, testing_inputs, testing_targets, int_to_char, num_classes, num_samples
 
 def save_dataset(model_folder_name, training_data, validation_data, testing_data):
     with open('{}/{}'.format(model_folder_name, dataset_fname), 'w+') as f:
@@ -279,14 +279,15 @@ def train(arguments):
     training_data, training_inputs, training_targets, training_inputs_mean, training_inputs_std, \
     validation_data, validation_inputs, validation_targets, \
     testing_data, testing_inputs, testing_targets, \
-    int_to_char, num_classes = divide_data(num_examples, training_part, testing_part, shuffle_count, sort_by_length)
+    int_to_char, num_classes, num_samples = divide_data(num_examples, training_part, testing_part, shuffle_count, sort_by_length)
 
     graph = tf.Graph()
     with graph.as_default():
         inputs, targets, seq_len, input_dropout_keep, output_dropout_keep, state_dropout_keep, \
         affine_dropout_keep, cost, ler, ler2, ler3, dense_hypothesis, dense_targets, decoded, optimizer \
             = create_model(num_features, num_hidden, num_layers, num_classes, initial_learning_rate, momentum, batch_size)
-        print("Totally {} trainable parameters".format(get_total_params_num()))
+        trainable_parameters = get_total_params_num()
+        print("Totally {} trainable parameters".format(trainable_parameters))
 
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
@@ -367,8 +368,9 @@ def train(arguments):
             if val_ler < lowest_val_error:
                 saver.save(session, model_folder_name + '/model')
                 with open('{}/{}'.format(model_folder_name, params_fname), 'w+') as f:
-                    f.write(str(curr_epoch) + '\n')
-                    f.write(str(val_ler) + '\n' + str(train_ler) + '\n')
+                    f.write('E: {}\n'.format(curr_epoch))
+                    f.write('Tr_err: {}\nVal_err: {}\n'.format(train_ler, val_ler))
+                    f.write('{} samples without padding\n{} trainable parameters\n'.format(num_samples, trainable_parameters))
                 lowest_val_error = val_ler
 
             train_losses.append(train_cost)

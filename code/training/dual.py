@@ -115,6 +115,15 @@ def main():
 
             b_obs, b_acts, b_rews = [], [], []
 
+            #TODO
+            #sample sentences from language model
+
+            #TODO
+            #sample audio from audio model
+
+            #TODO
+            #
+
             for _ in range(eparams['ep_per_batch']):
 
                 obs, acts, rews = policy_rollout(env, agent)

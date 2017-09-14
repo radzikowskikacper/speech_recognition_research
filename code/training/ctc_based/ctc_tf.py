@@ -13,7 +13,7 @@ from utils.utils import get_total_params_num
 ctrlc = False
 
 def sigint_handler(signum, frame):
-    print('CTRL+c pressed.\nFinishing training after')
+    print('CTRL+c pressed.\nFinishing last training epoch')
     global ctrlc
     ctrlc = True
 
@@ -391,7 +391,7 @@ def train(arguments):
                 f.write(log + '\n')
             print(log)
 
-        print('Testing network')
+        print('Testing network.\nSaved to {}'.format(model_folder_name))
         test_network(session, validation_inputs, validation_targets, batch_size, training_inputs_mean, training_inputs_std,
                      validation_data, 'validation', decoded, dense_hypothesis, inputs, seq_len, input_dropout_keep,
                      output_dropout_keep, state_dropout_keep, affine_dropout_keep, int_to_char, model_folder_name)

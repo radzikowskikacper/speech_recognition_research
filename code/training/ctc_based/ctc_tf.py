@@ -106,7 +106,7 @@ def divide_data(num_examples, training_part, testing_part, shuffle_count = 0, so
     #                                                          np.array([0] * 1000000)])
 
     return training_data, training_inputs, training_targets, training_inputs_mean, training_inputs_std, validation_data, \
-           validation_inputs, validation_targets, testing_data, testing_inputs, testing_targets, int_to_char, num_classes, num_samples
+           validation_inputs, validation_targets, testing_data, testing_inputs, testing_targets, int_to_char, num_classes, sum([d[2].shape[0] for d in data])
 
 def save_dataset(model_folder_name, training_data, validation_data, testing_data):
     with open('{}/{}'.format(model_folder_name, dataset_fname), 'w+') as f:

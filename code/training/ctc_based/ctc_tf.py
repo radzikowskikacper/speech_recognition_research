@@ -17,8 +17,6 @@ def sigint_handler(signum, frame):
     global ctrlc
     ctrlc = True
 
-signal.signal(signal.SIGINT, sigint_handler)
-
 dataset_fname = 'datasets.txt'
 final_outcomes_fname = 'final_outcomes.txt'
 history_fname = 'history.txt'
@@ -256,7 +254,6 @@ def test_network(session, test_inputs, test_targets, batch_size, training_inputs
 # THE MAIN CODE!
 def train(arguments):
     model_folder_name = '../data/umeerj/checkpoints/{}/{}'.format('_'.join([str(arg) for arg in arguments]), str(datetime.now()))
-    os.makedirs(model_folder_name)
 
     # Some configs
     num_features = 13
@@ -296,6 +293,9 @@ def train(arguments):
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
     with tf.Session(graph=graph, config=config) as session:
+        signal.signal(signal.SIGINT, sigint_handler)
+        os.makedirs(model_folder_name)
+
         # Initializate the weights and biases
         tf.global_variables_initializer().run()
         tf.local_variables_initializer().run()

@@ -281,8 +281,6 @@ def train(arguments):
     testing_data, testing_inputs, testing_targets, \
     int_to_char, num_classes = divide_data(num_examples, training_part, testing_part, shuffle_count, sort_by_length)
 
-    save_dataset(model_folder_name, training_data, validation_data, testing_data)
-
     graph = tf.Graph()
     with graph.as_default():
         inputs, targets, seq_len, input_dropout_keep, output_dropout_keep, state_dropout_keep, \
@@ -295,6 +293,7 @@ def train(arguments):
     with tf.Session(graph=graph, config=config) as session:
         signal.signal(signal.SIGINT, sigint_handler)
         os.makedirs(model_folder_name)
+        save_dataset(model_folder_name, training_data, validation_data, testing_data)
 
         # Initializate the weights and biases
         tf.global_variables_initializer().run()

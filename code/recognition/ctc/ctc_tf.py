@@ -6,7 +6,7 @@ from six.moves import xrange as range
 from random import shuffle
 from datetime import datetime
 
-from data_handling.loading import ctc_targeted
+from preprocessing.loading import ctc_targeted
 from utils.utils import sparse_tuple_from as sparse_tuple_from, calculate_error
 from utils.utils import get_total_params_num
 

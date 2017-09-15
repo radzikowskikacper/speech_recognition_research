@@ -12,7 +12,7 @@ __author__ = 'namju.kim@kakaobrain.com'
 
 
 # data path
-_data_path = "asset/data/"
+_data_path = "/home/kapi/ML-Yoshie/data/"
 
 
 #

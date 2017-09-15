@@ -3,7 +3,8 @@ from __future__ import division, print_function, absolute_import
 import tensorflow as tf
 import tflearn
 
-from feature_extraction import speech_data
+from preprocessing.feature_extraction import speech_data
+
 
 def do_demo():
     learning_rate = 0.0001

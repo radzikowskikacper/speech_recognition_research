@@ -1,7 +1,11 @@
-import os, numpy as np, traceback
-from feature_extraction import mfcc
-from threading import Thread, Lock
+import numpy as np
+import os
+import traceback
 from collections import defaultdict
+from threading import Thread, Lock
+
+from preprocessing.feature_extraction import mfcc
+
 
 def get_alphabet(data):
     alphabet = sorted(list(set([c for _, _, _, text, _, in data for c in text.lower()])))

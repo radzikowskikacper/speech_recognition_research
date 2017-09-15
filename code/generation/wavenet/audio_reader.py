@@ -135,7 +135,7 @@ class AudioReader(object):
             # means one or more at the bottom correspond to unused entries
             # in the embedding lookup table. But that's a small waste of memory
             # to keep the code simpler, and preserves correspondance between
-            # the id one specifies when generating, and the ids in the
+            # the id one specifies when generation, and the ids in the
             # file names.
             self.gc_category_cardinality += 1
             print("Detected --gc_cardinality={}".format(

@@ -17,7 +17,7 @@ except ImportError:
     raise ImportError
 
 from utils.utils import sparse_tuple_from as sparse_tuple_from
-from feature_extraction import mfcc
+from preprocessing.feature_extraction import mfcc
 
 # Constants
 SPACE_TOKEN = '<space>'

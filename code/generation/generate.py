@@ -272,7 +272,7 @@ def main():
         out = sess.run(decode, feed_dict={samples: waveform})
         write_wav(out, wavenet_params['sample_rate'], args.wav_out_path)
 
-    print('Finished generating. The result can be viewed in TensorBoard.')
+    print('Finished generation. The result can be viewed in TensorBoard.')
 
 
 if __name__ == '__main__':

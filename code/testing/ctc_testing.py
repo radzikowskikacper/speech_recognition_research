@@ -25,5 +25,5 @@ def test_network(session, test_inputs, test_targets, batch_size, training_inputs
             decoded_results = [s.replace('<space>', ' ') for s in decoded_results]
 
             for h in decoded_results:
-                f.write('{} -> {}\n'.format(data[i][4], h))
+                f.write('{} -> {}\n'.format(data[i][1], h))
                 i += 1

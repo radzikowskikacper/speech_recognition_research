@@ -62,40 +62,7 @@ def batch_generator(samples, targets, batch_size, samples_mean, samples_std, tar
             batches_saves[mode].append((rsamples, labels, samples_lengths, labels_lengths))
             yield rsamples, labels, samples_lengths, targets[batch_start:batch_start + batch_size]
 
-def batch_generator2(samples, targets, batch_size, samples_mean, samples_std, n_steps, target_parser = None, mode ='training'):
-    if mode in batches_saves:
-        for line in batches_saves[mode]:
-            yield line
-    else:
-        samples_per_batch = batch_size * n_steps
-        samples_stream = []
-        for sline in samples:
-            samples_stream.extend(sline)
-        targets_stream = []
-        for tline in targets:
-            targets_stream.extend(tline)
-
-
-        rsamples = []
-        labels = []
-        while True:
-            pass
-
-        for batch_i in range(len(samples) // batch_size):
-            batch_start = batch_size * batch_i
-            rsamples = samples[batch_start:batch_start + batch_size]
-            rsamples = pad_data2(rsamples, 0)
-            rsamples = (rsamples - samples_mean) / (samples_std)# - samples_min)
-            labels = targets[batch_start:batch_start + batch_size]
-#            labels = pad_data2(labels, 0)
-            samples_lengths = [s.shape[0] for s in rsamples]
-            labels_lengths = [l.shape[0] for l in labels]
-            if target_parser:
-                labels = target_parser(labels)
-            batches_saves[mode].append((rsamples, labels, samples_lengths, labels_lengths))
-            yield rsamples, labels, samples_lengths, labels_lengths
-
-def load_data(path):
+def preprocess_data(path):
     data_dir = os.path.join(path, 'wav', 'JE')
     doc_dir = os.path.join(path, 'doc', 'JEcontent', 'tab')
 
@@ -112,12 +79,12 @@ def load_data(path):
 
     i = 0
     for root, dirs, files in os.walk(data_dir):
-        if i == 100: break
+        if i == 10: break
         dirs.sort()
         for file in sorted(files):
-            data.append((os.path.join(root, file), fname_to_text[file[:-4]]))
+            data.append([os.path.join(root, file), fname_to_text[file[:-4]]])
             i += 1
-            if i == 100: break
+            if i == 10: break
 
     to_delete = []
     lck = Lock()
@@ -126,8 +93,8 @@ def load_data(path):
             if k % 200 == 0 and k > 0:
                 print('[{}] {} %'.format(id, (k - start) / (end - start) * 100))
             try:
-                data[k] = (data[k][0], data[k][1], np.array(mfcc.get_librosa_mfcc(data[k][0])),
-                           np.array(mfcc.get_other_mfcc(data[k][0])).T)
+                data[k].extend([np.array(mfcc.get_librosa_mfcc(data[k][0])), #20 mfcc
+                               np.array(mfcc.get_other_mfcc(data[k][0])).T]) #13 mfcc
             except:
                 print(data[k][0])
                 traceback.print_exc()
@@ -149,33 +116,35 @@ def load_data(path):
     for t in ts:
         t.join()
 
-    for k in reversed(sorted(to_delete)):
+    for k in sorted(to_delete, reverse=True):
         del data[k]
 
     return data
 
 def save_data_to_file(data, path):
     with open(path, 'w+') as f:
+        f.write('{}\n'.format(len(data)))
         for d in data:
             f.write(d[0] + '\n')
             f.write(d[1] + '\n')
-            for feat in d[2]:
-                f.write(' '.join([str(f) for f in feat]) + '\n')
-            for feat in d[3]:
-                f.write(' '.join([str(f) for f in feat]) + '\n')
+            for i in range(2, len(d)):
+                for feat in d[i]:
+                    f.write(' '.join([str(f) for f in feat]) + '\n')
 
-def load_data_from_file(path, num_features, samples):
+def load_data_from_file(path, num_features, samples = None):
     data = []
     with open(path) as f:
+        if not samples:
+            samples = int(f.readline().strip())
+
         for _ in range(samples):
             fname = f.readline().strip()
-            nums = []
-            nums2 = []
-            for i in range(num_features[0]):
-                nums.append(np.array([float(n) for n in f.readline().split()]))
-            for i in range(num_features[1]):
-                nums2.append(np.array([float(n) for n in f.readline().split()]))
             original_text = f.readline().strip()
-            data.append((fname, np.array(nums).T, np.array(nums2).T,
-                         original_text, original_text))
+
+            to_append = [fname, original_text]
+            for rng in num_features:
+                to_append.append(np.array([[float(n) for n in f.readline().split()] for _ in range(rng)]))
+
+            data.append(to_append)
+
     return data

@@ -7,6 +7,11 @@ if __name__ == '__main__':
         os.environ["CUDA_VISIBLE_DEVICES"] = str(arguments[1])
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 
+    from preprocessing.loading import ctc_targeted
+    data = ctc_targeted.load_data('../data/umeerj/ume-erj/')
+    ctc_targeted.save_data_to_file(data, '../data/umeerj/data_both_mfcc_2.dat')
+    os._exit(0)
+
     #from training.ctc import ctc_tensorflow_multidata_example
 
     from recognition.ctc import ctc_tf

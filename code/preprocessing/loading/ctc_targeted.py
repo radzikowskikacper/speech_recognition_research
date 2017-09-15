@@ -111,18 +111,13 @@ def load_data(path):
     print("Raw data preparation")
 
     i = 0
-    j = 0
     for root, dirs, files in os.walk(data_dir):
+        if i == 100: break
         dirs.sort()
         for file in sorted(files):
-            #if i == 25:
-            #    print(i)
-            #    break
-            data.append((os.path.join(root, file), 0,#np.array(extraction.get_features_vector(os.path.join(root, file))).T,
-                         fname_to_text[file[:-4]], fname_to_text[file[:-4]].lower()))
+            data.append((os.path.join(root, file), fname_to_text[file[:-4]]))
             i += 1
-
-    #data = sorted(data, key = lambda x: x[0])
+            if i == 100: break
 
     to_delete = []
     lck = Lock()
@@ -131,8 +126,8 @@ def load_data(path):
             if k % 200 == 0 and k > 0:
                 print('[{}] {} %'.format(id, (k - start) / (end - start) * 100))
             try:
-                data[k] = (data[k][0], np.array(mfcc.get_librosa_mfcc(data[k][0])).T,
-                           np.array(mfcc.get_other_mfcc(data[k][0])), data[k][2], data[k][3])
+                data[k] = (data[k][0], data[k][1], np.array(mfcc.get_librosa_mfcc(data[k][0])),
+                           np.array(mfcc.get_other_mfcc(data[k][0])).T)
             except:
                 print(data[k][0])
                 traceback.print_exc()
@@ -142,8 +137,9 @@ def load_data(path):
                 finally:
                     lck.release()
 
-    procs = 8
+    procs = 1
     ts = []
+    i = len(data)
     for k in range(procs):
         print("{} - {}, {}".format(int(k * i / procs), int((k + 1) * i / procs), i))
         ts.append(Thread(target=proc, args=(int(k * i / procs), int((k + 1) * i / procs), k,)))
@@ -162,12 +158,11 @@ def save_data_to_file(data, path):
     with open(path, 'w+') as f:
         for d in data:
             f.write(d[0] + '\n')
-            for feat in d[1].T:
+            f.write(d[1] + '\n')
+            for feat in d[2]:
                 f.write(' '.join([str(f) for f in feat]) + '\n')
-            for feat in d[2].T:
+            for feat in d[3]:
                 f.write(' '.join([str(f) for f in feat]) + '\n')
-            f.write(d[3] + '\n')
-            #f.write(' '.join([str(f) for f in d[3]]) + '\n')
 
 def load_data_from_file(path, num_features, samples):
     data = []

@@ -11,7 +11,7 @@ def get_librosa_mfcc(fname):
     if tm == 0.0:
         raise Exception("File corrupted")
 
-    wave, sr = librosa.load(fname)
+    wave, sr = librosa.load(fname, sr=None)
     return librosa.feature.mfcc(wave, sr)
 
 def get_other_mfcc(fname):

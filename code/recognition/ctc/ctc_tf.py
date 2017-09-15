@@ -6,11 +6,12 @@ from six.moves import xrange as range
 from random import shuffle
 from datetime import datetime
 
-from preprocessing.loading import ctc_targeted
+from preprocessing.loading import ctc_preprocessing
+from testing import ctc_testing
 from utils.utils import sparse_tuple_from as sparse_tuple_from, calculate_error
 from utils.utils import get_total_params_num
 
-from . import model
+from . import ctc_model
 
 ctrlc = False
 
@@ -46,70 +47,6 @@ def plot(train_losses, val_losses, train_errors, val_errors, fname):
     plt.savefig("{}{}".format(fname, error_plot_fname))
     plt.close()
 
-def divide_data(num_examples, training_part, testing_part, shuffle_count = 0, sort_by_length = False):
-    SPACE_TOKEN = '<space>'
-
-    data = ctc_targeted.load_data_from_file('../data/umeerj/data_both_mfcc.dat', [20, 13], num_examples)
-    print('Loaded {} data rows'.format(len(data)))
-    data = sorted(data, key=lambda x: x[2].shape[0], reverse=True)
-
-    data = data[-num_examples:]
-    print('Taking {} samples'.format(len(data)))
-
-    for i in range(shuffle_count):
-        shuffle(data)
-        print('Shuffled')
-
-    print('Totally {} samples, without padding'.format(sum([d[2].shape[0] for d in data])))
-
-    # fs, audio = wav.read('/home/kapi/projects/research/phd/asr/data/umeerj/ume-erj/wav/JE/DOS/F01/S6_001.wav')
-    # data[0] = (data[0][0], mfcc(audio, samplerate=fs), data[0][2], data[0][3])
-    alphabet = ctc_targeted.get_alphabet2([d[4] for d in data])
-    int_to_char = {i: char for i, char in enumerate([SPACE_TOKEN] + alphabet)}
-    char_to_int = {char: i for i, char in int_to_char.items()}
-    num_classes = len(int_to_char) + 1
-
-    all_targets = [d[3] for d in data]
-    all_targets = [' '.join(t.strip().lower().split(' '))
-                     #.replace('.', '').replace('-', '').replace("'", '').replace(':', '').replace(',', '').
-                     #   replace('?', '').replace('!', '')
-                 for t in all_targets]
-    all_targets = [target.replace(' ', '  ') for target in all_targets]
-    all_targets = [target.split(' ') for target in all_targets]
-    all_targets = [np.hstack([SPACE_TOKEN if x == '' else list(x) for x in target]) for target in all_targets]
-    # all_targets = [np.asarray([SPACE_INDEX if x == SPACE_TOKEN else ord(x) - FIRST_INDEX for x in target])
-    #               for target in all_targets]
-    all_targets = [np.asarray([char_to_int[x] for x in target]) for target in all_targets]
-    data = [(d[0], d[1], d[2], all_targets[i], d[4]) for i, d in enumerate(data)]
-
-    training_data = data[:int(training_part * len(data))]
-    if sort_by_length:
-        training_data = sorted(training_data, key= lambda x: x[2].shape[0], reverse=True)
-        print('Sorting examples by descending sequence length')
-    training_inputs = [d[2] for d in training_data]#all_inputs[:int(training_part * len(all_inputs))]
-    training_targets = [d[3] for d in training_data]#all_targets[:int(training_part * len(all_inputs))]
-    training_inputs_mean = np.sum([np.sum(s) for s in training_inputs]) / np.sum([np.size(s) for s in training_inputs])
-    training_inputs_std = np.sqrt(np.sum([np.sum(np.power(s - training_inputs_mean, 2)) for s in training_inputs]) /
-                             np.sum([np.size(s) for s in training_inputs]))
-
-    testing_data = data[int(training_part * len(data)):int((training_part + testing_part) * len(data))]
-    #testing_data = training_data
-    testing_inputs = [d[2] for d in testing_data]#all_inputs[int(training_part * len(all_inputs)):]
-    testing_targets = [d[3] for d in testing_data]#all_targets[int(training_part * len(all_inputs)):]
-
-    validation_data = data[int((training_part + testing_part) * len(data)):]
-    #validation_data = training_data
-    validation_inputs = [d[2] for d in validation_data]
-    validation_targets = [d[3] for d in validation_data]
-    #validation_targets = np.array([np.array([10, 20, 30, 40, 50]),
-    #                               np.array([0] * 1000000),
-    #                                        np.array([0] * 1000000),
-    #                                                 np.array([0] * 1000000),
-    #                                                          np.array([0] * 1000000)])
-
-    return training_data, training_inputs, training_targets, training_inputs_mean, training_inputs_std, validation_data, \
-           validation_inputs, validation_targets, testing_data, testing_inputs, testing_targets, int_to_char, num_classes, sum([d[2].shape[0] for d in data])
-
 def save_dataset(model_folder_name, training_data, validation_data, testing_data):
     with open('{}/{}'.format(model_folder_name, dataset_fname), 'w+') as f:
         f.write('\n'.join([d[0] for d in training_data]))
@@ -117,38 +54,6 @@ def save_dataset(model_folder_name, training_data, validation_data, testing_data
         f.write('\n'.join([d[0] for d in validation_data]))
         f.write('\n--\n')
         f.write('\n'.join([d[0] for d in testing_data]))
-
-def test_network(session, test_inputs, test_targets, batch_size, training_inputs_mean, training_inputs_std, data, mode,
-                 decoded, dense_hypothesis, inputs, seq_len, input_dropout_keep, output_dropout_keep, state_dropout_keep,
-                 affine_dropout_keep, int_to_char, model_folder_name):
-    with open('{}/{}'.format(model_folder_name, final_outcomes_fname), 'a') as f:
-        # Testing network
-        i = 0
-        f.write('---' + mode + '---\n')
-        for test_inputs, _, test_seq_len, _ in \
-                ctc_targeted.batch_generator(test_inputs, test_targets, batch_size, training_inputs_mean,
-                                             training_inputs_std, mode=mode):
-            d, dh = session.run([decoded[0], dense_hypothesis], {inputs: test_inputs,
-                                         seq_len: test_seq_len,
-                                         input_dropout_keep: 1,
-                                         output_dropout_keep: 1,
-                                         state_dropout_keep: 1,
-                                         affine_dropout_keep: 1
-                                         }
-                            )
-            dh = [d[:np.where(d == -1)[0][0] if -1 in d else len(d)] for d in dh]
-            decoded_results = [''.join([int_to_char[x] for x in hypothesis]) for hypothesis in np.asarray(dh)]
-            decoded_results = [s.replace('<space>', ' ') for s in decoded_results]
-    #        str_decoded = ' '.join([int_to_char[x] for x in np.asarray(d[1])])
-            # Replacing blank label to none
-    #        str_decoded = str_decoded.replace(chr(ord('z') + 1), '<BLANK>')
-            # Replacing space label to space
-    #        str_decoded = str_decoded.replace('<space>', ' ')
-    #        print('Decoded:\n{}'.format(str_decoded))
-
-            for h in decoded_results:
-                f.write('{} -> {}\n'.format(data[i][4], h))
-                i += 1
 
 # THE MAIN CODE!
 def train(arguments):
@@ -178,13 +83,14 @@ def train(arguments):
     training_data, training_inputs, training_targets, training_inputs_mean, training_inputs_std, \
     validation_data, validation_inputs, validation_targets, \
     testing_data, testing_inputs, testing_targets, \
-    int_to_char, num_classes, num_samples = divide_data(num_examples, training_part, testing_part, shuffle_count, sort_by_length)
+    int_to_char, num_classes, num_samples = \
+        ctc_preprocessing.divide_data(num_examples, training_part, testing_part, shuffle_count, sort_by_length)
 
     graph = tf.Graph()
     with graph.as_default():
         inputs, targets, seq_len, input_dropout_keep, output_dropout_keep, state_dropout_keep, \
         affine_dropout_keep, cost, ler, ler2, ler3, dense_hypothesis, dense_targets, decoded, optimizer \
-            = model.create_model(num_features, num_hidden, num_layers, num_classes, initial_learning_rate, momentum, batch_size)
+            = ctc_model.create_model(num_features, num_hidden, num_layers, num_classes, initial_learning_rate, momentum, batch_size)
         trainable_parameters = get_total_params_num()
         print("Totally {} trainable parameters".format(trainable_parameters))
 
@@ -211,8 +117,8 @@ def train(arguments):
             start = time.time()
 
             for train_inputs, train_targets, train_seq_len, _ in \
-                    ctc_targeted.batch_generator(training_inputs, training_targets, batch_size, training_inputs_mean,
-                                                 training_inputs_std, target_parser = sparse_tuple_from):
+                    ctc_preprocessing.batch_generator(training_inputs, training_targets, batch_size, training_inputs_mean,
+                                                      training_inputs_std, target_parser = sparse_tuple_from):
                 if ctrlc: break
 
                 feed = {inputs: train_inputs,
@@ -239,8 +145,8 @@ def train(arguments):
 
             val_cost = val_ler = val_max_lengths = 0
             for v_inputs, v_targets, v_seq_len, _ in \
-                    ctc_targeted.batch_generator(validation_inputs, validation_targets, batch_size, training_inputs_mean,
-                                                 training_inputs_std, target_parser = sparse_tuple_from, mode='validation'):
+                    ctc_preprocessing.batch_generator(validation_inputs, validation_targets, batch_size, training_inputs_mean,
+                                                      training_inputs_std, target_parser = sparse_tuple_from, mode='validation'):
                 if ctrlc: break
 
                 v_cost, dh, dt = session.run([cost, dense_hypothesis, dense_targets],
@@ -292,15 +198,18 @@ def train(arguments):
             print(log)
 
         print('Testing network.\nSaved to {}'.format(model_folder_name))
-        test_network(session, validation_inputs, validation_targets, batch_size, training_inputs_mean, training_inputs_std,
+        ctc_testing.test_network(session, validation_inputs, validation_targets, batch_size, training_inputs_mean, training_inputs_std,
                      validation_data, 'validation', decoded, dense_hypothesis, inputs, seq_len, input_dropout_keep,
-                     output_dropout_keep, state_dropout_keep, affine_dropout_keep, int_to_char, model_folder_name)
-        test_network(session, testing_inputs, testing_targets, batch_size, training_inputs_mean, training_inputs_std,
+                     output_dropout_keep, state_dropout_keep, affine_dropout_keep, int_to_char, model_folder_name,
+                     final_outcomes_fname)
+        ctc_testing.test_network(session, testing_inputs, testing_targets, batch_size, training_inputs_mean, training_inputs_std,
                      testing_data, 'testing', decoded, dense_hypothesis, inputs, seq_len, input_dropout_keep,
-                     output_dropout_keep, state_dropout_keep, affine_dropout_keep, int_to_char, model_folder_name)
-        test_network(session, training_inputs, training_targets, batch_size, training_inputs_mean, training_inputs_std,
+                     output_dropout_keep, state_dropout_keep, affine_dropout_keep, int_to_char, model_folder_name,
+                     final_outcomes_fname)
+        ctc_testing.test_network(session, training_inputs, training_targets, batch_size, training_inputs_mean, training_inputs_std,
                      training_data, 'training', decoded, dense_hypothesis, inputs, seq_len, input_dropout_keep,
-                     output_dropout_keep, state_dropout_keep, affine_dropout_keep, int_to_char, model_folder_name)
+                     output_dropout_keep, state_dropout_keep, affine_dropout_keep, int_to_char, model_folder_name,
+                     final_outcomes_fname)
 
 def load_and_test():
     training_inputs, training_targets, training_inputs_mean, training_inputs_std, \
@@ -322,8 +231,8 @@ def load_and_test():
         #print('\n'.join([n.name for n in graph.as_graph_def().node]))
 
         for i, (test_input, _, test_seq_len, _) in \
-                enumerate(ctc_targeted.batch_generator(testing_inputs, testing_targets, batch_size, training_inputs_mean,
-                                                       training_inputs_std)):
+                enumerate(ctc_preprocessing.batch_generator(testing_inputs, testing_targets, batch_size, training_inputs_mean,
+                                                            training_inputs_std)):
             d = sess.run(decoded, feed_dict={
                 input_samples: test_input, input_sequence_length: test_seq_len, dropout_keep:1
             })

@@ -8,7 +8,7 @@ __author__ = 'namju.kim@kakaobrain.com'
 
 
 # default data path
-_data_path = 'asset/data/'
+_data_path = '../data/umeerj/'
 
 #
 # vocabulary table

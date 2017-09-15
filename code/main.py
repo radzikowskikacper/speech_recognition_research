@@ -7,7 +7,7 @@ if __name__ == '__main__':
         os.environ["CUDA_VISIBLE_DEVICES"] = str(arguments[1])
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 
-    import recognition.wavenet.preprocess
+    import recognition.wavenet.train
 
     os._exit(0)
     from recognition.ctc import ctc_tf

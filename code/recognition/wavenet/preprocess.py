@@ -3,21 +3,35 @@ import pandas as pd
 import glob
 import csv
 import librosa
-import scikits.audiolab
-import data
+#import scikits.audiolab
+from . import data
 import os
 import subprocess
+from preprocessing.feature_extraction import mfcc
+from preprocessing.loading import ctc_preprocessing
 
 __author__ = 'namju.kim@kakaobrain.com'
 
 
 # data path
-_data_path = "/home/kapi/ML-Yoshie/data/"
+_data_path = "/home/kradziko/data/"
 
 
 #
 # process VCTK corpus
 #
+
+def process_umeerj(csv_file):
+    writer = csv.writer(csv_file, delimiter=',')
+
+    loaded_data = ctc_preprocessing.load_data_from_file('../data/umeerj/data_both_mfcc.dat', [20, 13])
+
+    for i, dt in enumerate(loaded_data):
+        print("UMEERJ corpus preprocessing (%d / %d) - '%s']" % (i, len(loaded_data), dt[0]))
+        label = data.str2index(dt[1])
+        target_filename = '../data/umeerj/preprocess/mfcc/' + dt[0].split('/')[-1] + '.npy'
+        writer.writerow([dt[0].split('/')[-1]] + label)
+        np.save(target_filename, dt[2], allow_pickle=False)
 
 def process_vctk(csv_file):
 
@@ -38,7 +52,7 @@ def process_vctk(csv_file):
         # wave file name
         wave_file = _data_path + 'VCTK-Corpus/wav48/%s/' % f[:4] + f + '.wav'
         fn = wave_file.split('/')[-1]
-        target_filename = 'asset/data/preprocess/mfcc/' + fn + '.npy'
+        target_filename = '../data/vltk/preprocess/mfcc/' + fn + '.npy'
         if os.path.exists( target_filename ):
             continue
         # print info
@@ -62,8 +76,6 @@ def process_vctk(csv_file):
             writer.writerow([fn] + label)
             # save mfcc
             np.save(target_filename, mfcc, allow_pickle=False)
-
-
 #
 # process LibriSpeech corpus
 #
@@ -200,25 +212,27 @@ def process_ted(csv_file, category):
             np.save(target_filename, mfcc, allow_pickle=False)
 
 
-#
-# Create directories
-#
-if not os.path.exists('asset/data/preprocess'):
-    os.makedirs('asset/data/preprocess')
-if not os.path.exists('asset/data/preprocess/meta'):
-    os.makedirs('asset/data/preprocess/meta')
-if not os.path.exists('asset/data/preprocess/mfcc'):
-    os.makedirs('asset/data/preprocess/mfcc')
-
+base = '../data/'
+for b in [base + 'umeerj', base + 'vltk']:
+    for c in ['meta', 'mfcc']:
+        if not os.path.exists(os.path.join(b, 'preprocess', c)):
+            os.makedirs(os.path.join(b, 'preprocess', c))
 
 #
 # Run pre-processing for training
 #
 
+# UMEERJ corpus
+csv_f = open(base + 'umeerj/preprocess/meta/train.csv', 'w')
+process_umeerj(csv_f)
+csv_f.close()
+
 # VCTK corpus
-csv_f = open('asset/data/preprocess/meta/train.csv', 'w')
+csv_f = open(base + 'vltk/preprocess/meta/train1.csv', 'w')
 process_vctk(csv_f)
 csv_f.close()
+
+os._exit(0)
 
 # LibriSpeech corpus for train
 csv_f = open('asset/data/preprocess/meta/train.csv', 'a+')

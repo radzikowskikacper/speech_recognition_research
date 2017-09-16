@@ -2,13 +2,8 @@ import sugartensor as tf
 from data import SpeechCorpus, voca_size
 from model import *
 
-
-__author__ = 'namju.kim@kakaobrain.com'
-
-
 # set log level to debug
 tf.sg_verbosity(10)
-
 
 #
 # hyper parameters
@@ -45,5 +40,6 @@ def get_loss(opt):
 #
 # train
 #
-tf.sg_train(lr=0.0001, loss=get_loss(input=inputs, target=labels, seq_len=seq_len),
+def train():
+    tf.sg_train(lr=0.0001, loss=get_loss(input=inputs, target=labels, seq_len=seq_len),
             ep_size=data.num_batch, max_ep=50)

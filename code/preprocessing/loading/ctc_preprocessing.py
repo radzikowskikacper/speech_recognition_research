@@ -58,7 +58,7 @@ def batch_generator(samples, targets, batch_size, samples_mean, samples_std, tar
             batches_saves[mode].append((rsamples, labels, samples_lengths, labels_lengths))
             yield rsamples, labels, samples_lengths, targets[batch_start:batch_start + batch_size]
 
-def preprocess_data(path):
+def preprocess_data(path, output_path):
     data_dir = os.path.join(path, 'wav', 'JE')
     doc_dir = os.path.join(path, 'doc', 'JEcontent', 'tab')
 
@@ -75,12 +75,13 @@ def preprocess_data(path):
 
     i = 0
     for root, dirs, files in os.walk(data_dir):
-        if i == 10: break
+        #if i == 10: break
         dirs.sort()
         for file in sorted(files):
             data.append([os.path.join(root, file), fname_to_text[file[:-4]]])
             i += 1
             if i == 10: break
+    print('Prepared space for {} data entries'.format(len(data)))
 
     to_delete = []
     lck = Lock()
@@ -100,7 +101,7 @@ def preprocess_data(path):
                 finally:
                     lck.release()
 
-    procs = 1
+    procs = 8
     ts = []
     i = len(data)
     for k in range(procs):
@@ -112,15 +113,29 @@ def preprocess_data(path):
     for t in ts:
         t.join()
 
+    print('Deleting {} corrupted file data'.format(len(to_delete)))
     for k in sorted(to_delete, reverse=True):
         del data[k]
+
+    print('Saving {} data entries'.format(len(data)))
+    save_data_to_file(data, output_path)
+
+    print('Validating save file')
+    data2 = load_data_from_file(output_path, [20, 13])
+
+    assert(len(data) == len(data2))
+    for d1, d2 in zip(data, data2):
+        assert(d1[0] == d2[0])
+        assert(d1[1] == d2[1])
+        assert(np.allclose(d1[2], d2[2]))
+        assert(np.allclose(d1[3], d2[3]))
+    print('Saved successfully')
 
     return data
 
 def save_data_to_file(data, path):
     with open(path, 'w+') as f:
         f.write('{}\n'.format(len(data)))
-        i = 0
         for d in data:
             f.write(d[0] + '\n')
             f.write(d[1] + '\n')
@@ -151,9 +166,9 @@ def load_data_from_file(path, num_features, samples = None):
 def divide_data(num_examples, training_part, testing_part, shuffle_count = 0, sort_by_length = False):
     SPACE_TOKEN = '<space>'
 
-    data = load_data_from_file('../data/umeerj/data_both_mfcc.dat', [20, 13], num_examples)
+    data = load_data_from_file('../data/umeerj/data_both_mfcc.dat', [20, 13])#, num_examples)
     print('Loaded {} data rows'.format(len(data)))
-    data = sorted(data, key=lambda x: x[2].shape[0], reverse=True)
+    data = sorted(data, key=lambda x: x[3].shape[1], reverse=True)
 
     data = data[-num_examples:]
     print('Taking {} samples'.format(len(data)))

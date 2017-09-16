@@ -162,7 +162,7 @@ def load_data_from_file(path, num_features, samples = None):
 def divide_data(num_examples, training_part, testing_part, shuffle_count = 0, sort_by_length = False):
     SPACE_TOKEN = '<space>'
 
-    data = load_data_from_file('../data/umeerj/data_both_mfcc.dat', [20, 13])#, num_examples)
+    data = load_data_from_file('../data/umeerj/data.dat', [20, 13])#, num_examples)
     print('Loaded {} data rows'.format(len(data)))
     data = sorted(data, key=lambda x: x[3].shape[1], reverse=True)
 

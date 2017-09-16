@@ -173,7 +173,7 @@ def divide_data(num_examples, training_part, testing_part, shuffle_count = 0, so
         shuffle(data)
         print('Shuffled')
 
-    print('Totally {} samples, without padding'.format(sum([d[2].shape[0] for d in data])))
+    print('Totally {} samples, without padding'.format(sum([d[3].shape[1] for d in data])))
 
     alphabet = get_alphabet([d[1] for d in data])
     int_to_char = {i: char for i, char in enumerate([SPACE_TOKEN] + alphabet)}
@@ -198,7 +198,7 @@ def divide_data(num_examples, training_part, testing_part, shuffle_count = 0, so
 
     training_data = data[:int(training_part * len(data))]
     if sort_by_length:
-        training_data = sorted(training_data, key= lambda x: x[2].shape[0], reverse=True)
+        training_data = sorted(training_data, key= lambda x: x[3].shape[0], reverse=True)
         print('Sorting examples by descending sequence length')
     training_inputs = [d[3] for d in training_data]
     training_targets = [d[4] for d in training_data]
@@ -208,11 +208,17 @@ def divide_data(num_examples, training_part, testing_part, shuffle_count = 0, so
 
     testing_data = data[int(training_part * len(data)):int((training_part + testing_part) * len(data))]
     #testing_data = training_data
+    if sort_by_length:
+        testing_data = sorted(testing_data, key= lambda x: x[3].shape[0], reverse=True)
+        print('Sorting examples by descending sequence length')
     testing_inputs = [d[3] for d in testing_data]
     testing_targets = [d[4] for d in testing_data]
 
     validation_data = data[int((training_part + testing_part) * len(data)):]
     #validation_data = training_data
+    if sort_by_length:
+        validation_data = sorted(validation_data, key= lambda x: x[3].shape[0], reverse=True)
+        print('Sorting examples by descending sequence length')
     validation_inputs = [d[3] for d in validation_data]
     validation_targets = [d[4] for d in validation_data]
     #validation_targets = np.array([np.array([10, 20, 30, 40, 50]),

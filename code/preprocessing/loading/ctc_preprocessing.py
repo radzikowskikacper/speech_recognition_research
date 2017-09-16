@@ -73,12 +73,10 @@ def preprocess_data(path, output_path):
 
     print("Raw data preparation")
 
-    i = 0
     for root, dirs, files in os.walk(data_dir):
         dirs.sort()
         for file in sorted(files):
             data.append([os.path.join(root, file), fname_to_text[file[:-4]]])
-            i += 1
     print('Prepared space for {} data entries'.format(len(data)))
 
     to_delete = []

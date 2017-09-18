@@ -14,8 +14,8 @@ if __name__ == '__main__':
     #train.train()
 
     #os._exit(0)
-    from recognition.ctc import ctc_tf
+    from recognition.ctc import training
     if len(arguments) > 1:
-        ctc_tf.train(sys.argv[1:])
+        training.train(sys.argv[1:])
     else:
-        ctc_tf.train(['default', 500, 450, 2, 1, 0.005, 0.9, 70000, 1, 1, 1, 1, 0.5, 0, 3, 1])
+        training.train(['default', 500, 450, 2, 1, 0.005, 0.9, 70000, 1, 1, 1, 1, 0.5, 0, 3, 1])

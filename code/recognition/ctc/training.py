@@ -1,17 +1,21 @@
-import os, time, matplotlib, tensorflow as tf, signal
+import matplotlib
+import os
+import signal
+import tensorflow as tf
+import time
+
 matplotlib.use('agg')
 import numpy as np, matplotlib.pyplot as plt
 
 from six.moves import xrange as range
-from random import shuffle
 from datetime import datetime
 
-from preprocessing.loading import ctc_preprocessing
+from recognition.ctc import data
 from testing import ctc_testing
 from utils.utils import sparse_tuple_from as sparse_tuple_from, calculate_error
 from utils.utils import get_total_params_num
 
-from . import ctc_model
+from . import model
 
 ctrlc = False
 
@@ -84,13 +88,13 @@ def train(arguments):
     validation_data, validation_inputs, validation_targets, \
     testing_data, testing_inputs, testing_targets, \
     int_to_char, num_classes, num_samples = \
-        ctc_preprocessing.divide_data(num_examples, training_part, testing_part, shuffle_count, sort_by_length)
+        data.divide_data(num_examples, training_part, testing_part, shuffle_count, sort_by_length)
 
     graph = tf.Graph()
     with graph.as_default():
         inputs, targets, seq_len, input_dropout_keep, output_dropout_keep, state_dropout_keep, \
         affine_dropout_keep, cost, ler, ler2, ler3, dense_hypothesis, dense_targets, decoded, optimizer \
-            = ctc_model.create_model(num_features, num_hidden, num_layers, num_classes, initial_learning_rate, momentum, batch_size)
+            = model.create_model(num_features, num_hidden, num_layers, num_classes, initial_learning_rate, momentum, batch_size)
         trainable_parameters = get_total_params_num()
         print("Totally {} trainable parameters".format(trainable_parameters))
 
@@ -117,8 +121,8 @@ def train(arguments):
             start = time.time()
 
             for train_inputs, train_targets, train_seq_len, _ in \
-                    ctc_preprocessing.batch_generator(training_inputs, training_targets, batch_size, training_inputs_mean,
-                                                      training_inputs_std, target_parser = sparse_tuple_from):
+                    data.batch_generator(training_inputs, training_targets, batch_size, training_inputs_mean,
+                                         training_inputs_std, target_parser = sparse_tuple_from):
                 if ctrlc: break
 
                 feed = {inputs: train_inputs,
@@ -145,8 +149,8 @@ def train(arguments):
 
             val_cost = val_ler = val_max_lengths = 0
             for v_inputs, v_targets, v_seq_len, _ in \
-                    ctc_preprocessing.batch_generator(validation_inputs, validation_targets, batch_size, training_inputs_mean,
-                                                      training_inputs_std, target_parser = sparse_tuple_from, mode='validation'):
+                    data.batch_generator(validation_inputs, validation_targets, batch_size, training_inputs_mean,
+                                         training_inputs_std, target_parser = sparse_tuple_from, mode='validation'):
                 if ctrlc: break
 
                 v_cost, dh, dt = session.run([cost, dense_hypothesis, dense_targets],
@@ -231,8 +235,9 @@ def load_and_test():
         #print('\n'.join([n.name for n in graph.as_graph_def().node]))
 
         for i, (test_input, _, test_seq_len, _) in \
-                enumerate(ctc_preprocessing.batch_generator(testing_inputs, testing_targets, batch_size, training_inputs_mean,
-                                                            training_inputs_std)):
+                enumerate(
+                    data.batch_generator(testing_inputs, testing_targets, batch_size, training_inputs_mean,
+                                         training_inputs_std)):
             d = sess.run(decoded, feed_dict={
                 input_samples: test_input, input_sequence_length: test_seq_len, dropout_keep:1
             })

@@ -1,7 +1,11 @@
-import tensorflow as tf, numpy as np, time, os
+import numpy as np
+import os
+import tensorflow as tf
+import time
 from tensorflow.python.layers.core import Dense
-from preprocessing.loading import ctc_preprocessing
-from random import shuffle
+
+from recognition.ctc import data
+
 
 def get_model_inputs(number_of_features):
     input_data = tf.placeholder(tf.float32, [None, None, number_of_features], name='input')
@@ -134,9 +138,9 @@ def demo(arguments):
     display_step = int(arguments[8])  # Check training loss after every 20 batches
     #'''
     #data = tf_loader.load_data_from_file('data4.dat', 20, samples)#
-    data = ctc_preprocessing.preprocess_data('../data/umeerj/ume-erj/')
+    preprocessed_data = data.preprocess_data('../data/umeerj/ume-erj/')
     #data = tf_loader.preprocess_data('../data/umeerj/ume-erj/')
-    alphabet = ctc_preprocessing.get_alphabet(data)
+    alphabet = data.get_alphabet(preprocessed_data)
     tokens = ['<PAD>', '<UNK>', '<GO>', '<EOS>']
     int_to_char = {i : char for i, char in enumerate(tokens + alphabet)}
     char_to_int = {char : i for i, char in int_to_char.items()}
@@ -144,9 +148,9 @@ def demo(arguments):
     #data = [(d[0], d[1], d[2], [char_to_int[char] for char in d[3].lower()]) for d in data]
     #data = tf_loader.normalize_data(data)
     #data = tf_loader.pad_data(data, char_to_int)
-    print(data[0][1].shape[1])
-    ctc_preprocessing.save_data_to_file(data, 'data_both_mfcc.dat')
-    print(len(data))
+    print(preprocessed_data[0][1].shape[1])
+    data.save_data_to_file(preprocessed_data, 'data_both_mfcc.dat')
+    print(len(preprocessed_data))
     print(char_to_int)
     return
 
@@ -195,8 +199,8 @@ def demo(arguments):
     checkpoint = "../data/best_model.ckpt"
 
     #shuffle(data)
-    training_data = data#[:int(0.8 * len(data))]
-    testing_data = data[int(0.8 * len(data)):]
+    training_data = preprocessed_data#[:int(0.8 * len(data))]
+    testing_data = preprocessed_data[int(0.8 * len(preprocessed_data)):]
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
     #config.allow_soft_placement=True
@@ -206,7 +210,7 @@ def demo(arguments):
         sess.run(tf.local_variables_initializer())
         for epoch_i in range(1, epochs + 1):
             for batch_i, (source_batch, target_batch, source_lengths, target_lengths) in enumerate(
-                    ctc_preprocessing.batch_generator(training_data, batch_size, char_to_int)):
+                    data.batch_generator(training_data, batch_size, char_to_int)):
                 tstart = time.time()
                 # Training step
                 _, loss, training_accuracy = sess.run(
@@ -223,7 +227,8 @@ def demo(arguments):
                     accs2 = []
                     val_losses = []
 
-                    for j, (testing_source_batch, testing_target_batch, testing_source_lengths, testing_target_lengths) in enumerate(ctc_preprocessing.batch_generator(
+                    for j, (testing_source_batch, testing_target_batch, testing_source_lengths, testing_target_lengths) in enumerate(
+                            data.batch_generator(
                         training_data, batch_size, char_to_int, 'testing')):
                         validation_loss, validation_accuracy, il = sess.run(
                             [cost, accuracy, inference_logits],
@@ -242,7 +247,7 @@ def demo(arguments):
                           .format(epoch_i,
                                   epochs,
                                   batch_i,
-                                  len(data) // batch_size,
+                                  len(preprocessed_data) // batch_size,
                                   loss, training_accuracy,
                                   np.average(np.array(val_losses)), (np.average(np.array(accs1)), np.average(np.array(accs2))),
                                   batch_size, rnn_size, num_layers, learning_rate, embedding_size, time.time() - tstart))

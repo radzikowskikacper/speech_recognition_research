@@ -1,14 +1,15 @@
-import numpy as np
-import pandas as pd
-import glob
 import csv
-import librosa
-#import scikits.audiolab
-from . import data
+import glob
 import os
 import subprocess
-from preprocessing.feature_extraction import mfcc
-from preprocessing.loading import ctc_preprocessing
+
+import librosa
+import numpy as np
+import pandas as pd
+
+from recognition.ctc import data
+# import scikits.audiolab
+from . import data
 
 __author__ = 'namju.kim@kakaobrain.com'
 
@@ -24,7 +25,7 @@ _data_path = "/home/kradziko/data/"
 def process_umeerj(csv_file):
     writer = csv.writer(csv_file, delimiter=',')
 
-    loaded_data = ctc_preprocessing.load_data_from_file('../data/umeerj/data_both_mfcc.dat', [20, 13])
+    loaded_data = data.load_data_from_file('../data/umeerj/data_both_mfcc.dat', [20, 13])
 
     for i, dt in enumerate(loaded_data):
         print("UMEERJ corpus preprocessing (%d / %d) - '%s']" % (i, len(loaded_data), dt[0]))

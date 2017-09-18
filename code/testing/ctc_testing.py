@@ -1,6 +1,7 @@
 import numpy as np
 
-from preprocessing.loading import ctc_preprocessing
+from recognition.ctc import data
+
 
 def test_network(session, test_inputs, test_targets, batch_size, training_inputs_mean, training_inputs_std, data, mode,
                  decoded, dense_hypothesis, inputs, seq_len, input_dropout_keep, output_dropout_keep, state_dropout_keep,
@@ -10,8 +11,8 @@ def test_network(session, test_inputs, test_targets, batch_size, training_inputs
         i = 0
         f.write('---' + mode + '---\n')
         for test_inputs, _, test_seq_len, _ in \
-                ctc_preprocessing.batch_generator(test_inputs, test_targets, batch_size, training_inputs_mean,
-                                                  training_inputs_std, mode=mode):
+                data.batch_generator(test_inputs, test_targets, batch_size, training_inputs_mean,
+                                     training_inputs_std, mode=mode):
             d, dh = session.run([decoded[0], dense_hypothesis], {inputs: test_inputs,
                                          seq_len: test_seq_len,
                                          input_dropout_keep: 1,

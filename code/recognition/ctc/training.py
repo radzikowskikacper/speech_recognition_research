@@ -61,7 +61,8 @@ def save_dataset(model_folder_name, training_data, validation_data, testing_data
 
 # THE MAIN CODE!
 def train(arguments):
-    model_folder_name = '../data/umeerj/checkpoints/{}/{}'.format('_'.join([str(arg) for arg in arguments]), str(datetime.now()))
+    model_folder_name = '../data/umeerj/checkpoints/{}/{}'.format('_'.join([str(arg) for arg in arguments]),
+                                                                  datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
 
     # Some configs
     num_features = 13
@@ -188,10 +189,11 @@ def train(arguments):
             val_errors.append(val_ler)
             plot(train_losses, val_losses, train_errors, val_errors, "{}/".format(model_folder_name))
 
-            log = "E: {}/{}, Tr_loss: {:.3f}, Tr_err: {:.1f}%, Val_loss: {:.3f}, Val_err: {:.1f}%, time: {:.2f} s " \
+            log = "{} E: {}/{}, Tr_loss: {:.3f}, Tr_err: {:.1f}%, Val_loss: {:.3f}, Val_err: {:.1f}%, time: {:.2f} s " \
                   "- - - GPU: {}, H: {}, L: {}, BS: {}, LR: {}, M: {}, Ex: {}, Dr-keep: {} / {} / {} / {}, " \
                   "Data: {:.2f} / {:.2f} / {:.2f}, Shuffle: {}, Sort by length: {}"
-            log = log.format(curr_epoch+1, num_epochs, train_cost, train_ler * 100, val_cost, val_ler * 100,
+            log = log.format(datetime.now().strftime("%Y/%m/%d %H:%M:%S"), curr_epoch+1, num_epochs, train_cost,
+                             train_ler * 100, val_cost, val_ler * 100,
                              time.time() - start, gpu, num_hidden, num_layers, batch_size, initial_learning_rate,
                              momentum, num_examples, input_dropout_keep_prob, output_dropout_keep_prob,
                              state_dropout_keep_prob, affine_dropout_keep_prob, training_part,

@@ -58,7 +58,7 @@ class PTBModel(object):
 
   def __init__(self, is_training, config, input_):
     self._is_training = is_training
-    self._input = input_
+    self.input = input_
     self._rnn_params = None
     self._cell = None
     self.batch_size = input_.batch_size
@@ -92,24 +92,24 @@ class PTBModel(object):
         average_across_batch=True)
 
     # Update the cost
-    self._cost = tf.reduce_sum(loss)
-    self._final_state = state
+    self.cost = tf.reduce_sum(loss)
+    self.final_state = state
 
     if not is_training:
       return
 
-    self._lr = tf.Variable(0.0, trainable=False)
+    self.lr = tf.Variable(0.0, trainable=False)
     tvars = tf.trainable_variables()
-    grads, _ = tf.clip_by_global_norm(tf.gradients(self._cost, tvars),
+    grads, _ = tf.clip_by_global_norm(tf.gradients(self.cost, tvars),
                                       config.max_grad_norm)
-    optimizer = tf.train.GradientDescentOptimizer(self._lr)
-    self._train_op = optimizer.apply_gradients(
+    optimizer = tf.train.GradientDescentOptimizer(self.lr)
+    self.train_op = optimizer.apply_gradients(
         zip(grads, tvars),
         global_step=tf.contrib.framework.get_or_create_global_step())
 
     self._new_lr = tf.placeholder(
         tf.float32, shape=[], name="new_learning_rate")
-    self._lr_update = tf.assign(self._lr, self._new_lr)
+    self._lr_update = tf.assign(self.lr, self._new_lr)
 
   def _build_rnn_graph(self, inputs, config, is_training):
     if config.rnn_mode == CUDNN:
@@ -135,7 +135,7 @@ class PTBModel(object):
                  tf.float32)
     h = tf.zeros([config.num_layers, self.batch_size, config.hidden_size],
                  tf.float32)
-    self._initial_state = (tf.contrib.rnn.LSTMStateTuple(h=h, c=c),)
+    self.initial_state = (tf.contrib.rnn.LSTMStateTuple(h=h, c=c),)
     outputs, h, c = self._cell(inputs, h, c, self._rnn_params, is_training)
     outputs = tf.transpose(outputs, [1, 0, 2])
     outputs = tf.reshape(outputs, [-1, config.hidden_size])
@@ -164,8 +164,8 @@ class PTBModel(object):
     cell = tf.contrib.rnn.MultiRNNCell(
         [cell for _ in range(config.num_layers)], state_is_tuple=True)
 
-    self._initial_state = cell.zero_state(config.batch_size, data_type())
-    state = self._initial_state
+    self.initial_state = cell.zero_state(config.batch_size, data_type())
+    state = self.initial_state
     # Simplified version of tensorflow_models/tutorials/rnn/rnn.py's rnn().
     # This builds an unrolled LSTM for tutorial purposes only.
     # In general, use the rnn() or state_saving_rnn() from rnn.py.
@@ -190,23 +190,23 @@ class PTBModel(object):
   def export_ops(self, name):
     """Exports ops to collections."""
     self._name = name
-    ops = {util.with_prefix(self._name, "cost"): self._cost}
+    ops = {util.with_prefix(self._name, "cost"): self.cost}
     if self._is_training:
-      ops.update(lr=self._lr, new_lr=self._new_lr, lr_update=self._lr_update)
+      ops.update(lr=self.lr, new_lr=self._new_lr, lr_update=self._lr_update)
       if self._rnn_params:
         ops.update(rnn_params=self._rnn_params)
     for name, op in ops.items():
       tf.add_to_collection(name, op)
-    self._initial_state_name = util.with_prefix(self._name, "initial")
-    self._final_state_name = util.with_prefix(self._name, "final")
-    util.export_state_tuples(self._initial_state, self._initial_state_name)
-    util.export_state_tuples(self._final_state, self._final_state_name)
+    self.initial_state_name = util.with_prefix(self._name, "initial")
+    self.final_state_name = util.with_prefix(self._name, "final")
+    util.export_state_tuples(self.initial_state, self.initial_state_name)
+    util.export_state_tuples(self.final_state, self.final_state_name)
 
   def import_ops(self):
     """Imports ops from collections."""
     if self._is_training:
-      self._train_op = tf.get_collection_ref("train_op")[0]
-      self._lr = tf.get_collection_ref("lr")[0]
+      self.train_op = tf.get_collection_ref("train_op")[0]
+      self.lr = tf.get_collection_ref("lr")[0]
       self._new_lr = tf.get_collection_ref("new_lr")[0]
       self._lr_update = tf.get_collection_ref("lr_update")[0]
       rnn_params = tf.get_collection_ref("rnn_params")
@@ -218,45 +218,12 @@ class PTBModel(object):
             rnn_params,
             base_variable_scope="Model/RNN")
         tf.add_to_collection(tf.GraphKeys.SAVEABLE_OBJECTS, params_saveable)
-    self._cost = tf.get_collection_ref(util.with_prefix(self._name, "cost"))[0]
+    self.cost = tf.get_collection_ref(util.with_prefix(self._name, "cost"))[0]
     num_replicas = FLAGS.num_gpus if self._name == "Train" else 1
-    self._initial_state = util.import_state_tuples(
-        self._initial_state, self._initial_state_name, num_replicas)
-    self._final_state = util.import_state_tuples(
-        self._final_state, self._final_state_name, num_replicas)
-
-  @property
-  def input(self):
-    return self._input
-
-  @property
-  def initial_state(self):
-    return self._initial_state
-
-  @property
-  def cost(self):
-    return self._cost
-
-  @property
-  def final_state(self):
-    return self._final_state
-
-  @property
-  def lr(self):
-    return self._lr
-
-  @property
-  def train_op(self):
-    return self._train_op
-
-  @property
-  def initial_state_name(self):
-    return self._initial_state_name
-
-  @property
-  def final_state_name(self):
-    return self._final_state_name
-
+    self.initial_state = util.import_state_tuples(
+        self.initial_state, self.initial_state_name, num_replicas)
+    self.final_state = util.import_state_tuples(
+        self.final_state, self.final_state_name, num_replicas)
 
 class SmallConfig(object):
   """Small config."""

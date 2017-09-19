@@ -7,7 +7,7 @@ import time
 import numpy as np
 import tensorflow as tf
 
-from . import data as reader
+from . import ptb_reader as reader
 from . import util
 
 from tensorflow.python.client import device_lib

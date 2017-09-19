@@ -427,7 +427,7 @@ def main(_):
                          input_=test_input)
 
     models = {"Train": m, "Valid": mvalid, "Test": mtest}
-    for name, model in models.iteritems():
+    for name, model in models.items():
       model.export_ops(name)
     metagraph = tf.train.export_meta_graph()
     if tf.__version__ < "1.1.0" and FLAGS.num_gpus > 1:

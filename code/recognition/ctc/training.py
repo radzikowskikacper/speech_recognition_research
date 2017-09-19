@@ -196,7 +196,7 @@ def train(arguments):
                 f.write(log + '\n')
             print(log)
 
-        print('Testing networ k.\nSaved to {}'.format(model_folder_name))
+        print('Testing network.\nSaved to {}'.format(model_folder_name))
         testing.test_network(session, validation_inputs, validation_targets, batch_size, training_inputs_mean, training_inputs_std,
                              validation_data, 'validation', decoded, dense_hypothesis, inputs, seq_len, input_dropout_keep,
                              output_dropout_keep, state_dropout_keep, affine_dropout_keep, int_to_char, model_folder_name,

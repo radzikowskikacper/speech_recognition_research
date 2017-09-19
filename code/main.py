@@ -17,4 +17,4 @@ if __name__ == '__main__':
     if len(arguments) > 1:
         training.train(sys.argv[1:])
     else:
-        training.train(['default', 500, 50, 1, 50, 0.005, 0.9, 70, 1, 1, 1, 1, 0.5, 0])
+        training.train(['default', 500, 50, 1, 50, 0.005, 0.9, 1, 1, 1, 1])

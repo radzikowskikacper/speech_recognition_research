@@ -73,13 +73,10 @@ def train(arguments):
     batch_size = int(arguments[4])
     initial_learning_rate = float(arguments[5])
     momentum = float(arguments[6])
-    num_examples = int(arguments[7])
-    input_dropout_keep_prob = float(arguments[8])
-    output_dropout_keep_prob = float(arguments[9])
-    state_dropout_keep_prob = float(arguments[10])
-    affine_dropout_keep_prob = float(arguments[11])
-    training_part = float(arguments[12])
-    testing_part = float(arguments[13])
+    input_dropout_keep_prob = float(arguments[7])
+    output_dropout_keep_prob = float(arguments[8])
+    state_dropout_keep_prob = float(arguments[9])
+    affine_dropout_keep_prob = float(arguments[10])
 
     # Dividing the data
     training_data, training_inputs, training_targets, training_inputs_mean, training_inputs_std, \
@@ -87,6 +84,7 @@ def train(arguments):
     testing_data, testing_inputs, testing_targets, \
     int_to_char, num_classes, num_samples = \
         data.load_data_sets('../data/umeerj/10k')
+    print('{} samples without padding'.format(num_samples))
 
     graph = tf.Graph()
     with graph.as_default():
@@ -94,7 +92,7 @@ def train(arguments):
         affine_dropout_keep, cost, ler, ler2, ler3, dense_hypothesis, dense_targets, decoded, optimizer \
             = model.create_model(num_features, num_hidden, num_layers, num_classes, initial_learning_rate, momentum, batch_size)
         trainable_parameters = get_total_params_num()
-        print("Totally {} trainable parameters".format(trainable_parameters))
+        print("{} trainable parameters".format(trainable_parameters))
 
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
@@ -187,14 +185,12 @@ def train(arguments):
             plot(train_losses, val_losses, train_errors, val_errors, "{}/".format(model_folder_name))
 
             log = "{} E: {}/{}, Tr_loss: {:.3f}, Tr_err: {:.1f}%, Val_loss: {:.3f}, Val_err: {:.1f}%, time: {:.2f} s " \
-                  "- - - GPU: {}, H: {}, L: {}, BS: {}, LR: {}, M: {}, Ex: {}, Dr-keep: {} / {} / {} / {}, " \
-                  "Data: {:.2f} / {:.2f} / {:.2f}"
+                  "- - - GPU: {}, H: {}, L: {}, BS: {}, LR: {}, M: {}, Dr-keep: {} / {} / {} / {}, "
             log = log.format(datetime.now().strftime("%Y/%m/%d %H:%M:%S"), curr_epoch+1, num_epochs, train_cost,
                              train_ler * 100, val_cost, val_ler * 100,
                              time.time() - start, gpu, num_hidden, num_layers, batch_size, initial_learning_rate,
-                             momentum, num_examples, input_dropout_keep_prob, output_dropout_keep_prob,
-                             state_dropout_keep_prob, affine_dropout_keep_prob, training_part,
-                             1 - training_part - testing_part, testing_part)
+                             momentum, input_dropout_keep_prob, output_dropout_keep_prob,
+                             state_dropout_keep_prob, affine_dropout_keep_prob)
 
             with open('{}/{}'.format(model_folder_name, history_fname), 'a') as f:
                 f.write(log + '\n')

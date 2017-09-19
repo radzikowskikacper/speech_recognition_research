@@ -195,7 +195,7 @@ class PTBModel(object):
       ops.update(lr=self._lr, new_lr=self._new_lr, lr_update=self._lr_update)
       if self._rnn_params:
         ops.update(rnn_params=self._rnn_params)
-    for name, op in ops.iteritems():
+    for name, op in ops.items():
       tf.add_to_collection(name, op)
     self._initial_state_name = util.with_prefix(self._name, "initial")
     self._final_state_name = util.with_prefix(self._name, "final")

@@ -1,8 +1,9 @@
-import matplotlib
 import os
 import signal
-import tensorflow as tf
 import time
+
+import matplotlib
+import tensorflow as tf
 
 matplotlib.use('agg')
 import numpy as np, matplotlib.pyplot as plt
@@ -10,8 +11,7 @@ import numpy as np, matplotlib.pyplot as plt
 from six.moves import xrange as range
 from datetime import datetime
 
-from recognition.ctc import data
-from testing import ctc_testing
+from recognition.ctc import data, testing
 from utils.utils import sparse_tuple_from as sparse_tuple_from, calculate_error
 from utils.utils import get_total_params_num
 
@@ -99,7 +99,7 @@ def train(arguments):
     with tf.Session(graph=graph, config=config) as session:
         signal.signal(signal.SIGINT, sigint_handler)
         os.makedirs(model_folder_name)
-        save_dataset(model_folder_name, training_data, validation_data, testing_data)
+        #save_dataset(model_folder_name, training_data, validation_data, testing_data)
 
         # Initializate the weights and biases
         tf.global_variables_initializer().run()
@@ -197,18 +197,14 @@ def train(arguments):
             print(log)
 
         print('Testing networ k.\nSaved to {}'.format(model_folder_name))
-        ctc_testing.test_network(session, validation_inputs, validation_targets, batch_size, training_inputs_mean, training_inputs_std,
-                     validation_data, 'validation', decoded, dense_hypothesis, inputs, seq_len, input_dropout_keep,
-                     output_dropout_keep, state_dropout_keep, affine_dropout_keep, int_to_char, model_folder_name,
-                     final_outcomes_fname)
-        ctc_testing.test_network(session, testing_inputs, testing_targets, batch_size, training_inputs_mean, training_inputs_std,
-                     testing_data, 'testing', decoded, dense_hypothesis, inputs, seq_len, input_dropout_keep,
-                     output_dropout_keep, state_dropout_keep, affine_dropout_keep, int_to_char, model_folder_name,
-                     final_outcomes_fname)
-        ctc_testing.test_network(session, training_inputs, training_targets, batch_size, training_inputs_mean, training_inputs_std,
-                     training_data, 'training', decoded, dense_hypothesis, inputs, seq_len, input_dropout_keep,
-                     output_dropout_keep, state_dropout_keep, affine_dropout_keep, int_to_char, model_folder_name,
-                     final_outcomes_fname)
+        testing.test_network(session, validation_inputs, validation_targets, batch_size, training_inputs_mean, training_inputs_std,
+                             validation_data, 'validation', decoded, dense_hypothesis, inputs, seq_len, input_dropout_keep,
+                             output_dropout_keep, state_dropout_keep, affine_dropout_keep, int_to_char, model_folder_name,
+                             final_outcomes_fname)
+        testing.test_network(session, training_inputs, training_targets, batch_size, training_inputs_mean, training_inputs_std,
+                             training_data, 'training', decoded, dense_hypothesis, inputs, seq_len, input_dropout_keep,
+                             output_dropout_keep, state_dropout_keep, affine_dropout_keep, int_to_char, model_folder_name,
+                             final_outcomes_fname)
 
 def load_and_test():
     training_inputs, training_targets, training_inputs_mean, training_inputs_std, \

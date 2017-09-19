@@ -136,8 +136,12 @@ def save_data_to_file(data, path):
             f.write(d[0] + '\n')
             f.write(d[1] + '\n')
             for i in range(2, len(d)):
-                for feat in d[i]:
-                    f.write(' '.join([str(f) for f in feat]) + '\n')
+                if len(d[i].shape) == 2:
+                    for feat in d[i]:
+                        f.write(' '.join([str(f) for f in feat]) + '\n')
+                else:
+                    f.write(' '.join([str(f) for f in d[i]]) + '\n')
+
 
 def load_data_from_file(path, num_features, samples = None):
     data = []
@@ -153,26 +157,73 @@ def load_data_from_file(path, num_features, samples = None):
 
             to_append = [fname, original_text]
             for rng in num_features:
-                to_append.append(np.array([[float(n) for n in f.readline().split()] for _ in range(rng)]))
+                if rng > 1:
+                    to_append.append(np.array([[float(n) for n in f.readline().split()] for _ in range(rng)]))
+                else:
+                    to_append.append(np.array([float(n) for n in f.readline().split()]))
 
             data.append(to_append)
 
     return data
 
-def divide_data(num_examples, training_part, testing_part, shuffle_count = 0, sort_by_length = False):
+def load_data_sets(directory):
+    training_data = load_data_from_file(os.path.join(directory, 'training.txt'), [20, 13, 1])
+    testing_data = load_data_from_file(os.path.join(directory, 'testing.txt'), [20, 13, 1])
+    validation_data = load_data_from_file(os.path.join(directory, 'validation.txt'), [20, 13, 1])
+
     SPACE_TOKEN = '<space>'
 
-    data = load_data_from_file('../data/umeerj/data.dat', [20, 13])#, num_examples)
+    for ds in [training_data, testing_data, validation_data]:
+        for i in range(len(ds)):
+            ds[i][2] = ds[i][2].T
+            ds[i][3] = ds[i][3].T
+
+    alphabet = get_alphabet([d[1] for d in testing_data] + [d[1] for d in training_data] + [d[1] for d in validation_data])
+    int_to_char = {i: char for i, char in enumerate([SPACE_TOKEN] + alphabet)}
+    char_to_int = {char: i for i, char in int_to_char.items()}
+    num_classes = len(int_to_char) + 1
+
+    training_data = sorted(training_data, key= lambda x: x[3].shape[0], reverse=True)
+    training_inputs = [d[3] for d in training_data]
+    training_targets = [d[4] for d in training_data]
+    training_inputs_mean = np.sum([np.sum(s) for s in training_inputs]) / np.sum([np.size(s) for s in training_inputs])
+    training_inputs_std = np.sqrt(np.sum([np.sum(np.power(s - training_inputs_mean, 2)) for s in training_inputs]) /
+                             np.sum([np.size(s) for s in training_inputs]))
+
+    #testing_data = training_data
+    testing_data = sorted(testing_data, key= lambda x: x[3].shape[0], reverse=True)
+    testing_inputs = [d[3] for d in testing_data]
+    testing_targets = [d[4] for d in testing_data]
+
+    #validation_data = training_data
+    validation_data = sorted(validation_data, key= lambda x: x[3].shape[0], reverse=True)
+    validation_inputs = [d[3] for d in validation_data]
+    validation_targets = [d[4] for d in validation_data]
+    #validation_targets = np.array([np.array([10, 20, 30, 40, 50]),
+    #                               np.array([0] * 1000000),
+    #                                        np.array([0] * 1000000),
+    #                                                 np.array([0] * 1000000),
+    #                                                          np.array([0] * 1000000)])
+
+    return training_data, training_inputs, training_targets, training_inputs_mean, training_inputs_std, validation_data, \
+           validation_inputs, validation_targets, testing_data, testing_inputs, testing_targets, int_to_char, num_classes, \
+           sum([d[3].shape[0] for d in validation_data] + [d[3].shape[0] for d in testing_data] + [d[3].shape[0] for d in training_data])
+
+def prepare_data_sets(fname, num_examples, training_part, testing_part):
+    SPACE_TOKEN = '<space>'
+
+    data = load_data_from_file(fname, [20, 13])#, num_examples)
     print('Loaded {} data rows'.format(len(data)))
-    data = sorted(data, key=lambda x: x[3].shape[1], reverse=True)
 
-    data = data[-num_examples:]
-    print('Taking {} samples'.format(len(data)))
-
-    for i in range(shuffle_count):
+    if num_examples == 70000:
+        data = sorted(data, key=lambda x: x[3].shape[1], reverse=True)
+        data = data[-num_examples:]
         shuffle(data)
-        print('Shuffled')
+    else:
+        shuffle(data)
+        data = data[-num_examples:]
 
+    print('Taking {} samples'.format(len(data)))
     print('Totally {} samples, without padding'.format(sum([d[3].shape[1] for d in data])))
 
     alphabet = get_alphabet([d[1] for d in data])
@@ -188,18 +239,14 @@ def divide_data(num_examples, training_part, testing_part, shuffle_count = 0, so
     all_targets = [target.replace(' ', '  ') for target in all_targets]
     all_targets = [target.split(' ') for target in all_targets]
     all_targets = [np.hstack([SPACE_TOKEN if x == '' else list(x) for x in target]) for target in all_targets]
-    # all_targets = [np.asarray([SPACE_INDEX if x == SPACE_TOKEN else ord(x) - FIRST_INDEX for x in target])
-    #               for target in all_targets]
     all_targets = [np.asarray([char_to_int[x] for x in target]) for target in all_targets]
     for i in range(len(data)):
         data[i].append(all_targets[i])
-        data[i][2] = data[i][2].T
-        data[i][3] = data[i][3].T
+        #data[i][2] = data[i][2].T
+        #data[i][3] = data[i][3].T
 
     training_data = data[:int(training_part * len(data))]
-    if sort_by_length:
-        training_data = sorted(training_data, key= lambda x: x[3].shape[0], reverse=True)
-        print('Sorting examples by descending sequence length')
+    #training_data = sorted(training_data, key= lambda x: x[3].shape[0], reverse=True)
     training_inputs = [d[3] for d in training_data]
     training_targets = [d[4] for d in training_data]
     training_inputs_mean = np.sum([np.sum(s) for s in training_inputs]) / np.sum([np.size(s) for s in training_inputs])
@@ -208,17 +255,13 @@ def divide_data(num_examples, training_part, testing_part, shuffle_count = 0, so
 
     testing_data = data[int(training_part * len(data)):int((training_part + testing_part) * len(data))]
     #testing_data = training_data
-    if sort_by_length:
-        testing_data = sorted(testing_data, key= lambda x: x[3].shape[0], reverse=True)
-        print('Sorting examples by descending sequence length')
+    #testing_data = sorted(testing_data, key= lambda x: x[3].shape[0], reverse=True)
     testing_inputs = [d[3] for d in testing_data]
     testing_targets = [d[4] for d in testing_data]
 
     validation_data = data[int((training_part + testing_part) * len(data)):]
     #validation_data = training_data
-    if sort_by_length:
-        validation_data = sorted(validation_data, key= lambda x: x[3].shape[0], reverse=True)
-        print('Sorting examples by descending sequence length')
+    #validation_data = sorted(validation_data, key= lambda x: x[3].shape[0], reverse=True)
     validation_inputs = [d[3] for d in validation_data]
     validation_targets = [d[4] for d in validation_data]
     #validation_targets = np.array([np.array([10, 20, 30, 40, 50]),

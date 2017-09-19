@@ -24,7 +24,6 @@ def sigint_handler(signum, frame):
     global ctrlc
     ctrlc = True
 
-dataset_fname = 'datasets.txt'
 final_outcomes_fname = 'final_outcomes.txt'
 history_fname = 'history.txt'
 params_fname = 'params.txt'
@@ -52,12 +51,12 @@ def plot(train_losses, val_losses, train_errors, val_errors, fname):
     plt.close()
 
 def save_dataset(model_folder_name, training_data, validation_data, testing_data):
-    with open('{}/{}'.format(model_folder_name, dataset_fname), 'w+') as f:
+    with open('{}/{}'.format(model_folder_name, 'training.txt'), 'w+') as f:
         f.write('\n'.join([d[0] for d in training_data]))
-        f.write('\n--\n')
-        f.write('\n'.join([d[0] for d in validation_data]))
-        f.write('\n--\n')
+    with open('{}/{}'.format(model_folder_name, 'testing.txt'), 'w+') as f:
         f.write('\n'.join([d[0] for d in testing_data]))
+    with open('{}/{}'.format(model_folder_name, 'validation.txt'), 'w+') as f:
+        f.write('\n'.join([d[0] for d in validation_data]))
 
 # THE MAIN CODE!
 def train(arguments):
@@ -81,15 +80,13 @@ def train(arguments):
     affine_dropout_keep_prob = float(arguments[11])
     training_part = float(arguments[12])
     testing_part = float(arguments[13])
-    shuffle_count = int(arguments[14])
-    sort_by_length = bool(int(arguments[15]))
 
     # Dividing the data
     training_data, training_inputs, training_targets, training_inputs_mean, training_inputs_std, \
     validation_data, validation_inputs, validation_targets, \
     testing_data, testing_inputs, testing_targets, \
     int_to_char, num_classes, num_samples = \
-        data.divide_data(num_examples, training_part, testing_part, shuffle_count, sort_by_length)
+        data.load_data_sets('../data/umeerj/10k')
 
     graph = tf.Graph()
     with graph.as_default():
@@ -191,19 +188,19 @@ def train(arguments):
 
             log = "{} E: {}/{}, Tr_loss: {:.3f}, Tr_err: {:.1f}%, Val_loss: {:.3f}, Val_err: {:.1f}%, time: {:.2f} s " \
                   "- - - GPU: {}, H: {}, L: {}, BS: {}, LR: {}, M: {}, Ex: {}, Dr-keep: {} / {} / {} / {}, " \
-                  "Data: {:.2f} / {:.2f} / {:.2f}, Shuffle: {}, Sort by length: {}"
+                  "Data: {:.2f} / {:.2f} / {:.2f}"
             log = log.format(datetime.now().strftime("%Y/%m/%d %H:%M:%S"), curr_epoch+1, num_epochs, train_cost,
                              train_ler * 100, val_cost, val_ler * 100,
                              time.time() - start, gpu, num_hidden, num_layers, batch_size, initial_learning_rate,
                              momentum, num_examples, input_dropout_keep_prob, output_dropout_keep_prob,
                              state_dropout_keep_prob, affine_dropout_keep_prob, training_part,
-                             1 - training_part - testing_part, testing_part, shuffle_count, sort_by_length)
+                             1 - training_part - testing_part, testing_part)
 
             with open('{}/{}'.format(model_folder_name, history_fname), 'a') as f:
                 f.write(log + '\n')
             print(log)
 
-        print('Testing network.\nSaved to {}'.format(model_folder_name))
+        print('Testing networ k.\nSaved to {}'.format(model_folder_name))
         ctc_testing.test_network(session, validation_inputs, validation_targets, batch_size, training_inputs_mean, training_inputs_std,
                      validation_data, 'validation', decoded, dense_hypothesis, inputs, seq_len, input_dropout_keep,
                      output_dropout_keep, state_dropout_keep, affine_dropout_keep, int_to_char, model_folder_name,

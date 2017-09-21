@@ -13,9 +13,9 @@ if __name__ == '__main__':
     #from recognition.wavenet import train
     #train.train()
 
-    from language_model import training as lm_training
-    lm_training.main2()
-    os._exit(0)
+    #from language_model import training
+    #training.main2()
+    #os._exit(0)
 
     from recognition.ctc import training
     if len(arguments) > 1:

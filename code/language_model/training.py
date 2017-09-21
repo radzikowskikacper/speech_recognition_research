@@ -82,6 +82,8 @@ class PTBModel(object):
     logits = tf.nn.xw_plus_b(output, softmax_w, softmax_b)
      # Reshape logits to be a 3-D tensor for sequence loss
     logits = tf.reshape(logits, [self.batch_size, self.num_steps, vocab_size])
+    self.logits = tf.nn.softmax(logits)
+    self.logits2 = tf.argmax(self.logits, axis=2)
 
     # Use the contrib sequence loss and average over the batches
     loss = tf.contrib.seq2seq.sequence_loss(
@@ -190,7 +192,9 @@ class PTBModel(object):
   def export_ops(self, name):
     """Exports ops to collections."""
     self._name = name
-    ops = {util.with_prefix(self._name, "cost"): self.cost}
+    ops = {util.with_prefix(self._name, "cost"): self.cost,
+           util.with_prefix(self._name, 'logits') : self.logits,
+           util.with_prefix(self._name, 'logits2'): self.logits2}
     if self._is_training:
       ops.update(lr=self.lr, new_lr=self._new_lr, lr_update=self._lr_update)
       if self._rnn_params:
@@ -219,6 +223,8 @@ class PTBModel(object):
             base_variable_scope="Model/RNN")
         tf.add_to_collection(tf.GraphKeys.SAVEABLE_OBJECTS, params_saveable)
     self.cost = tf.get_collection_ref(util.with_prefix(self._name, "cost"))[0]
+    self.logits = tf.get_collection_ref(util.with_prefix(self._name, 'logits'))[0]
+    self.logits2 = tf.get_collection_ref(util.with_prefix(self._name, 'logits2'))[0]
     num_replicas = FLAGS.num_gpus if self._name == "Train" else 1
     self.initial_state = util.import_state_tuples(
         self.initial_state, self.initial_state_name, num_replicas)
@@ -293,7 +299,7 @@ class TestConfig(object):
   rnn_mode = BLOCK
 
 
-def run_epoch(session, model, eval_op=None, verbose=False):
+def run_epoch(session, model, eval_op=None, verbose=False, id_to_word = None):
   """Runs the model on the given data."""
   start_time = time.time()
   costs = 0.0
@@ -303,6 +309,8 @@ def run_epoch(session, model, eval_op=None, verbose=False):
   fetches = {
       "cost": model.cost,
       "final_state": model.final_state,
+    "logits" : model.logits,
+      'logits2' : model.logits2
   }
   if eval_op is not None:
     fetches["eval_op"] = eval_op
@@ -316,6 +324,10 @@ def run_epoch(session, model, eval_op=None, verbose=False):
     vals = session.run(fetches, feed_dict)
     cost = vals["cost"]
     state = vals["final_state"]
+    logits = vals['logits']
+    logits2 = vals['logits2']
+
+    print('\n'.join([' '.join([id_to_word[id] for id in line]) for line in logits2]))
 
     costs += cost
     iters += model.input.num_steps
@@ -362,7 +374,7 @@ def main(_):
         % (len(gpus), FLAGS.num_gpus))
 
   raw_data = reader.ptb_raw_data(FLAGS.data_path)
-  train_data, valid_data, test_data, _ = raw_data
+  train_data, valid_data, test_data, _, id_to_word = raw_data
 
   config = get_config()
   eval_config = get_config()
@@ -418,12 +430,12 @@ def main(_):
 
         print("Epoch: %d Learning rate: %.3f" % (i + 1, session.run(m.lr)))
         train_perplexity = run_epoch(session, m, eval_op=m.train_op,
-                                     verbose=True)
+                                     verbose=True, id_to_word=id_to_word)
         print("Epoch: %d Train Perplexity: %.3f" % (i + 1, train_perplexity))
-        valid_perplexity = run_epoch(session, mvalid)
+        valid_perplexity = run_epoch(session, mvalid, id_to_word=id_to_word)
         print("Epoch: %d Valid Perplexity: %.3f" % (i + 1, valid_perplexity))
 
-      test_perplexity = run_epoch(session, mtest)
+      test_perplexity = run_epoch(session, mtest, id_to_word=id_to_word)
       print("Test Perplexity: %.3f" % test_perplexity)
 
       if FLAGS.save_path:

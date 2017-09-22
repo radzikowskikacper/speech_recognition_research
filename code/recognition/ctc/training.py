@@ -61,7 +61,7 @@ def save_dataset(model_folder_name, training_data, validation_data, testing_data
 # THE MAIN CODE!
 def train(arguments):
     model_folder_name = '../data/umeerj/checkpoints/{}/{}'.format('_'.join([str(arg) for arg in arguments]),
-                                                                  datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
+                                                                  datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
     # Some configs
     num_features = 13

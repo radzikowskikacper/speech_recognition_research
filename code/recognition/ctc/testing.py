@@ -10,6 +10,7 @@ def test_network(session, data_inputs, data_targets, batch_size, training_inputs
     with open('{}/{}'.format(model_folder_name, final_outcomes_fname), 'w+') as f:
         f.write('---' + mode + '---\n')
         j = 0
+
         for test_input, _, test_seq_len, _ in \
                 ctc_data.batch_generator(data_inputs, data_targets, batch_size, training_inputs_mean,
                                          training_inputs_std, mode=mode):
@@ -29,6 +30,7 @@ def test_network(session, data_inputs, data_targets, batch_size, training_inputs
             decoded_results = [s.replace('<space>', ' ') for s in decoded_results]
 
             for h in decoded_results:
+                #print('{} -> {}'.format(data[j][1], h))
                 f.write('{} -> {}\n'.format(data[j][1], h))
                 j += 1
 
@@ -47,6 +49,6 @@ def test(model_folder_name):
         affine_dropout_keep, cost, ler, ler2, ler3, dense_hypothesis, dense_targets, decoded, optimizer \
             = model.load_existing_model(model_folder_name, session)
 
-        test_network(session, testing_inputs, testing_targets, 1, training_inputs_mean, training_inputs_std,
-                     testing_data, 'testing', decoded, dense_hypothesis, inputs, seq_len, input_dropout_keep,
-                     output_dropout_keep, state_dropout_keep, affine_dropout_keep, int_to_char, '.', 'testt.txt')
+        test_network(session, training_inputs, training_targets, 50, training_inputs_mean, training_inputs_std,
+                     training_data, 'testing', decoded, dense_hypothesis, inputs, seq_len, input_dropout_keep,
+                     output_dropout_keep, state_dropout_keep, affine_dropout_keep, int_to_char, '.', 'testt.txt', dense_targets, targets)

@@ -65,10 +65,6 @@ def train(arguments):
     output_dropout_keep_prob = float(arguments[6])
     state_dropout_keep_prob = float(arguments[7])
     affine_dropout_keep_prob = float(arguments[8])
-    if training_mode == 'new':
-        num_hidden = int(arguments[9])
-        num_layers = int(arguments[10])
-        momentum = float(arguments[11])
 
     # Dividing the data
     training_data, training_inputs, training_targets, training_inputs_mean, training_inputs_std, \
@@ -82,26 +78,28 @@ def train(arguments):
     config.gpu_options.allow_growth = True
     with tf.Session(config=config) as session:
         if training_mode == 'new':
+            num_hidden = int(arguments[9])
+            num_layers = int(arguments[10])
+            momentum = float(arguments[11])
             model_folder_name = '../data/umeerj/checkpoints/{}/{}'.format('_'.join([str(arg) for arg in arguments]),
                                                                           datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             inputs, targets, seq_len, input_dropout_keep, output_dropout_keep, state_dropout_keep, \
             affine_dropout_keep, cost, ler, ler2, ler3, dense_hypothesis, dense_targets, decoded, optimizer, learning_rate \
                = model.create_model(num_features, num_hidden, num_layers, num_classes, momentum, batch_size)
-            os.makedirs(model_folder_name)
+            tf.global_variables_initializer().run()
+            tf.local_variables_initializer().run()
         else:
-            model_folder_name = arguments[9]
+            model_folder_name = old_foolder_name = arguments[9]
             inputs, targets, seq_len, input_dropout_keep, output_dropout_keep, state_dropout_keep, \
             affine_dropout_keep, cost, ler, ler2, ler3, dense_hypothesis, dense_targets, decoded, optimizer \
                 = model.load_existing_model(model_folder_name, session)
             model_folder_name += '/' + datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        os.makedirs(model_folder_name)
         trainable_parameters = get_total_params_num()
         print("{} trainable parameters".format(trainable_parameters))
 
         signal.signal(signal.SIGINT, sigint_handler)
-
-        # Initializate the weights and biases
-        tf.global_variables_initializer().run()
-        tf.local_variables_initializer().run()
 
         lowest_val_error = 2
         val_errors = list()

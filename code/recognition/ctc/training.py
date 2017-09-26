@@ -85,9 +85,8 @@ def train(arguments):
             model_folder_name = '../data/umeerj/checkpoints/{}/{}'.format('_'.join([str(arg) for arg in arguments]),
                                                                           datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             inputs, targets, seq_len, input_dropout_keep, output_dropout_keep, state_dropout_keep, \
-            affine_dropout_keep, cost, ler, ler2, ler3, dense_hypothesis, dense_targets, decoded, optimizer \
-                = model.create_model(num_features, num_hidden, num_layers, num_classes, initial_learning_rate, momentum,
-                                     batch_size)
+            affine_dropout_keep, cost, ler, ler2, ler3, dense_hypothesis, dense_targets, decoded, optimizer, learning_rate \
+               = model.create_model(num_features, num_hidden, num_layers, num_classes, momentum, batch_size)
             os.makedirs(model_folder_name)
         else:
             model_folder_name = arguments[9]
@@ -184,13 +183,22 @@ def train(arguments):
             val_errors.append(val_ler)
             plot(train_losses, val_losses, train_errors, val_errors, "{}/".format(model_folder_name))
 
-            log = "{} E: {}/{}, Tr_loss: {:.3f}, Tr_err: {:.1f}%, Val_loss: {:.3f}, Val_err: {:.1f}%, time: {:.2f} s " \
-                  "- - - GPU: {}, H: {}, L: {}, BS: {}, LR: {}, M: {}, Dr-keep: {} / {} / {} / {}, "
-            log = log.format(datetime.now().strftime("%Y/%m/%d %H:%M:%S"), curr_epoch+1, num_epochs, train_cost,
-                             train_ler * 100, val_cost, val_ler * 100,
-                             time.time() - start, gpu, num_hidden, num_layers, batch_size, initial_learning_rate,
-                             momentum, input_dropout_keep_prob, output_dropout_keep_prob,
-                             state_dropout_keep_prob, affine_dropout_keep_prob)
+            if training_mode == 'new':
+                log = "{} E: {}/{}, Tr_loss: {:.3f}, Tr_err: {:.1f}%, Val_loss: {:.3f}, Val_err: {:.1f}%, time: {:.2f} s " \
+                      "- - - GPU: {}, H: {}, L: {}, BS: {}, LR: {}, M: {}, Dr-keep: {} / {} / {} / {}, "
+                log = log.format(datetime.now().strftime("%Y/%m/%d %H:%M:%S"), curr_epoch+1, num_epochs, train_cost,
+                                 train_ler * 100, val_cost, val_ler * 100,
+                                 time.time() - start, gpu, num_hidden, num_layers, batch_size, initial_learning_rate,
+                                 momentum, input_dropout_keep_prob, output_dropout_keep_prob,
+                                 state_dropout_keep_prob, affine_dropout_keep_prob)
+            else:
+                log = "{} E: {}/{}, Tr_loss: {:.3f}, Tr_err: {:.1f}%, Val_loss: {:.3f}, Val_err: {:.1f}%, time: {:.2f} s " \
+                      "- - - GPU: {}, BS: {}, LR: {}, Dr-keep: {} / {} / {} / {}, "
+                log = log.format(datetime.now().strftime("%Y/%m/%d %H:%M:%S"), curr_epoch+1, num_epochs, train_cost,
+                                 train_ler * 100, val_cost, val_ler * 100,
+                                 time.time() - start, gpu, batch_size, initial_learning_rate,
+                                 input_dropout_keep_prob, output_dropout_keep_prob,
+                                 state_dropout_keep_prob, affine_dropout_keep_prob)
 
             with open('{}/{}'.format(model_folder_name, history_fname), 'a') as f:
                 f.write(log + '\n')

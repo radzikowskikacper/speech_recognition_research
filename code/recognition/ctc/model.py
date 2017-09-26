@@ -17,6 +17,7 @@ def load_existing_model(dir_name, sess):
     targets_shape = graph.get_tensor_by_name('input_targets/shape:0')
     targets_values = graph.get_tensor_by_name('input_targets/values:0')
     targets_indices = graph.get_tensor_by_name('input_targets/indices:0')
+    #learning_rate = graph.get_tensor_by_name('learning_rate:0')
     targets = tf.SparseTensor(targets_indices, targets_values, targets_shape)
     cost = graph.get_tensor_by_name('cost:0')
     ler = graph.get_tensor_by_name('error_rate:0')
@@ -30,9 +31,9 @@ def load_existing_model(dir_name, sess):
     #print('\n'.join([n.name for n in graph.as_graph_def().node]))
 
     return inputs, targets, seq_len, input_dropout_keep, output_dropout_keep, state_dropout_keep, affine_dropout_keep, \
-            cost, ler, ler2, ler3, dense_hypothesis, dense_targets, decoded, optimizer
+            cost, ler, ler2, ler3, dense_hypothesis, dense_targets, decoded, optimizer#, learning_rate
 
-def create_model(num_features, num_hidden, num_layers, num_classes, initial_learning_rate, momentum, batch_size):
+def create_model(num_features, num_hidden, num_layers, num_classes, momentum, batch_size):
     # e.g: log filter bank or MFCC features
     # Has size [batch_size, max_stepsize, num_features], but the
     # batch_size and max_stepsize can vary along each step
@@ -41,6 +42,7 @@ def create_model(num_features, num_hidden, num_layers, num_classes, initial_lear
     output_dropout_keep = tf.placeholder(tf.float32, name='out_dropout')
     state_dropout_keep = tf.placeholder(tf.float32, name='state_dropout')
     affine_dropout_keep = tf.placeholder(tf.float32, name="affine_dropout")
+    learning_rate = tf.placeholder(tf.float32, name="learning_rate")
 
     targets = tf.sparse_placeholder(tf.int32, name='input_targets')
     seq_len = tf.placeholder(tf.int32, [None], name='input_sequence_length')
@@ -83,7 +85,7 @@ def create_model(num_features, num_hidden, num_layers, num_classes, initial_lear
     loss = tf.nn.ctc_loss(targets, logits, seq_len)
     cost = tf.reduce_mean(loss, name='cost')
 
-    optimizer = tf.train.MomentumOptimizer(initial_learning_rate,
+    optimizer = tf.train.MomentumOptimizer(learning_rate,
                                            momentum).minimize(cost, name="optimization_operation")
 
     # Option 2: tf.nn.ctc_beam_search_decoder
@@ -133,4 +135,4 @@ def create_model(num_features, num_hidden, num_layers, num_classes, initial_lear
     max_lengths = tf.reduce_sum(tf.maximum(dense_targets_lengths, dense_hypothesis_lengths))
 
     return inputs, targets, seq_len, input_dropout_keep, output_dropout_keep, state_dropout_keep, affine_dropout_keep, \
-            cost, ler, ler2, ler3, dense_hypothesis, dense_targets, decoded, optimizer
+            cost, ler, ler2, ler3, dense_hypothesis, dense_targets, decoded, optimizer, learning_rate

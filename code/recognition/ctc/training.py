@@ -24,7 +24,8 @@ def sigint_handler(signum, frame):
     global ctrlc
     ctrlc = True
 
-final_outcomes_fname = 'final_outcomes.txt'
+final_outcomes_validation_fname = 'validation_outcomes.txt'
+final_outcomes_training_fname = 'training_outcomes.txt'
 history_fname = 'history.txt'
 params_fname = 'params.txt'
 error_plot_fname = 'errors.png'
@@ -56,16 +57,18 @@ def train(arguments):
     num_features = 13
 
     gpu = arguments[0]
-    num_epochs = int(arguments[1])
-    num_hidden = int(arguments[2])
-    num_layers = int(arguments[3])
-    batch_size = int(arguments[4])
-    initial_learning_rate = float(arguments[5])
-    momentum = float(arguments[6])
-    input_dropout_keep_prob = float(arguments[7])
-    output_dropout_keep_prob = float(arguments[8])
-    state_dropout_keep_prob = float(arguments[9])
-    affine_dropout_keep_prob = float(arguments[10])
+    training_mode = arguments[1]
+    batch_size = int(arguments[2])
+    initial_learning_rate = float(arguments[3])
+    num_epochs = int(arguments[4])
+    input_dropout_keep_prob = float(arguments[5])
+    output_dropout_keep_prob = float(arguments[6])
+    state_dropout_keep_prob = float(arguments[7])
+    affine_dropout_keep_prob = float(arguments[8])
+    if training_mode == 'new':
+        num_hidden = int(arguments[9])
+        num_layers = int(arguments[10])
+        momentum = float(arguments[11])
 
     # Dividing the data
     training_data, training_inputs, training_targets, training_inputs_mean, training_inputs_std, \
@@ -78,7 +81,7 @@ def train(arguments):
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
     with tf.Session(config=config) as session:
-        if len(arguments) == 11:
+        if training_mode == 'new':
             model_folder_name = '../data/umeerj/checkpoints/{}/{}'.format('_'.join([str(arg) for arg in arguments]),
                                                                           datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             inputs, targets, seq_len, input_dropout_keep, output_dropout_keep, state_dropout_keep, \
@@ -87,11 +90,11 @@ def train(arguments):
                                      batch_size)
             os.makedirs(model_folder_name)
         else:
-            model_folder_name = arguments[11]
+            model_folder_name = arguments[9]
             inputs, targets, seq_len, input_dropout_keep, output_dropout_keep, state_dropout_keep, \
             affine_dropout_keep, cost, ler, ler2, ler3, dense_hypothesis, dense_targets, decoded, optimizer \
                 = model.load_existing_model(model_folder_name, session)
-
+            model_folder_name += '/' + datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         trainable_parameters = get_total_params_num()
         print("{} trainable parameters".format(trainable_parameters))
 
@@ -197,8 +200,8 @@ def train(arguments):
         testing.test_network(session, validation_inputs, validation_targets, batch_size, training_inputs_mean, training_inputs_std,
                              validation_data, 'validation', decoded, dense_hypothesis, inputs, seq_len, input_dropout_keep,
                              output_dropout_keep, state_dropout_keep, affine_dropout_keep, int_to_char, model_folder_name,
-                             final_outcomes_fname)
+                             final_outcomes_validation_fname)
         testing.test_network(session, training_inputs, training_targets, batch_size, training_inputs_mean, training_inputs_std,
                              training_data, 'training', decoded, dense_hypothesis, inputs, seq_len, input_dropout_keep,
                              output_dropout_keep, state_dropout_keep, affine_dropout_keep, int_to_char, model_folder_name,
-                             final_outcomes_fname)
+                             final_outcomes_training_fname)

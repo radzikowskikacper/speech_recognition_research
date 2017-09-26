@@ -7,12 +7,12 @@ from . import model
 def test_network(session, data_inputs, data_targets, batch_size, training_inputs_mean, training_inputs_std, data, mode,
                  decoded, dense_hypothesis, inputs, seq_len, input_dropout_keep, output_dropout_keep, state_dropout_keep,
                  affine_dropout_keep, int_to_char, model_folder_name, final_outcomes_fname):
-    with open('{}/{}'.format(model_folder_name, final_outcomes_fname), 'a') as f:
+    with open('{}/{}'.format(model_folder_name, final_outcomes_fname), 'w+') as f:
         f.write('---' + mode + '---\n')
         j = 0
         for test_input, _, test_seq_len, _ in \
                 ctc_data.batch_generator(data_inputs, data_targets, batch_size, training_inputs_mean,
-                                         training_inputs_std):
+                                         training_inputs_std, mode=mode):
             d, dh = session.run([decoded[0], dense_hypothesis],
                                 {
                                     inputs: test_input,

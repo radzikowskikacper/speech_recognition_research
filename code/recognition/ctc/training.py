@@ -75,8 +75,9 @@ def train(arguments):
         data.load_data_sets('../data/umeerj/10k')
     print('{} samples without padding'.format(num_samples))
 
-    graph = tf.Graph()
-    with graph.as_default():
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
+    with tf.Session(config=config) as session:
         if len(arguments) == 11:
             model_folder_name = '../data/umeerj/checkpoints/{}/{}'.format('_'.join([str(arg) for arg in arguments]),
                                                                           datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
@@ -84,20 +85,17 @@ def train(arguments):
             affine_dropout_keep, cost, ler, ler2, ler3, dense_hypothesis, dense_targets, decoded, optimizer \
                 = model.create_model(num_features, num_hidden, num_layers, num_classes, initial_learning_rate, momentum,
                                      batch_size)
+            os.makedirs(model_folder_name)
         else:
             model_folder_name = arguments[11]
             inputs, targets, seq_len, input_dropout_keep, output_dropout_keep, state_dropout_keep, \
             affine_dropout_keep, cost, ler, ler2, ler3, dense_hypothesis, dense_targets, decoded, optimizer \
-                = model.load_existing_model(model_folder_name)
+                = model.load_existing_model(model_folder_name, session)
 
         trainable_parameters = get_total_params_num()
         print("{} trainable parameters".format(trainable_parameters))
 
-    config = tf.ConfigProto()
-    config.gpu_options.allow_growth = True
-    with tf.Session(graph=graph, config=config) as session:
         signal.signal(signal.SIGINT, sigint_handler)
-        os.makedirs(model_folder_name)
 
         # Initializate the weights and biases
         tf.global_variables_initializer().run()
@@ -148,15 +146,16 @@ def train(arguments):
                 if ctrlc: break
 
                 v_cost, dh, dt = session.run([cost, dense_hypothesis, dense_targets],
-                                             {inputs: v_inputs,
-                                              targets: v_targets,
-                                              seq_len: v_seq_len,
-                                              input_dropout_keep: 1,
-                                              output_dropout_keep: 1,
-                                              state_dropout_keep: 1,
-                                              affine_dropout_keep: 1
-                                              }
-                                             )
+                                             {
+                                                 inputs: v_inputs,
+                                                 targets: v_targets,
+                                                 seq_len: v_seq_len,
+                                                 input_dropout_keep: 1,
+                                                 output_dropout_keep: 1,
+                                                 state_dropout_keep: 1,
+                                                 affine_dropout_keep: 1
+                                             }
+                                            )
 
                 val_cost += v_cost
 

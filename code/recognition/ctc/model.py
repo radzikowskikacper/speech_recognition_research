@@ -1,34 +1,33 @@
 import tensorflow as tf
 from . import data
 
-def load_existing_model(dir_name):
+def load_existing_model(dir_name, sess):
     saver = tf.train.import_meta_graph('{}/model.meta'.format(dir_name))
-    with tf.Session() as sess:
-        # First let's load meta graph and restore weights
-        #saver = tf.train.import_meta_graph('my_test_model-0')
-        saver.restore(sess, tf.train.latest_checkpoint(dir_name))
-        graph = tf.get_default_graph()
-        decoded = graph.get_tensor_by_name('CTCGreedyDecoder:1')
-        inputs = graph.get_tensor_by_name('input_samples:0')
-        targets_shape = graph.get_tensor_by_name('input_targets/shape:0')
-        targets_values = graph.get_tensor_by_name('input_targets/values:0')
-        targets_indices = graph.get_tensor_by_name('input_targets/indices:0')
-        targets = tf.SparseTensor(targets_indices, targets_values, targets_shape)
-        seq_len = graph.get_tensor_by_name('input_sequence_length:0')
-        input_dropout_keep = graph.get_tensor_by_name('in_dropout:0')
-        output_dropout_keep = graph.get_tensor_by_name('out_dropout:0')
-        state_dropout_keep = graph.get_tensor_by_name('state_dropout:0')
-        affine_dropout_keep = graph.get_tensor_by_name('affine_dropout:0')
-        cost = graph.get_tensor_by_name('cost:0')
-        ler = graph.get_tensor_by_name('error_rate:0')
-        #TODO
-        ler2 = None
-        #TODO
-        ler3 = None
-        dense_hypothesis = graph.get_tensor_by_name('SparseToDense_1:0')
-        dense_targets = graph.get_tensor_by_name('SparseToDense:0')
-        optimizer = graph.get_operation_by_name('optimization_operation')
-        #print('\n'.join([n.name for n in graph.as_graph_def().node]))
+    saver.restore(sess, tf.train.latest_checkpoint(dir_name))
+    graph = tf.get_default_graph()
+
+    decoded = [graph.get_tensor_by_name('CTCGreedyDecoder:1')]
+    inputs = graph.get_tensor_by_name('input_samples:0')
+    input_dropout_keep = graph.get_tensor_by_name('in_dropout:0')
+    output_dropout_keep = graph.get_tensor_by_name('out_dropout:0')
+    state_dropout_keep = graph.get_tensor_by_name('state_dropout:0')
+    affine_dropout_keep = graph.get_tensor_by_name('affine_dropout:0')
+    seq_len = graph.get_tensor_by_name('input_sequence_length:0')
+    dense_hypothesis = graph.get_tensor_by_name('SparseToDense_1:0')
+    targets_shape = graph.get_tensor_by_name('input_targets/shape:0')
+    targets_values = graph.get_tensor_by_name('input_targets/values:0')
+    targets_indices = graph.get_tensor_by_name('input_targets/indices:0')
+    targets = tf.SparseTensor(targets_indices, targets_values, targets_shape)
+    cost = graph.get_tensor_by_name('cost:0')
+    ler = graph.get_tensor_by_name('error_rate:0')
+    #TODO
+    ler2 = None
+    #TODO
+    ler3 = None
+    dense_targets = graph.get_tensor_by_name('SparseToDense:0')
+    optimizer = graph.get_operation_by_name('optimization_operation')
+
+    #print('\n'.join([n.name for n in graph.as_graph_def().node]))
 
     return inputs, targets, seq_len, input_dropout_keep, output_dropout_keep, state_dropout_keep, affine_dropout_keep, \
             cost, ler, ler2, ler3, dense_hypothesis, dense_targets, decoded, optimizer

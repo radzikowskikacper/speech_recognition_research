@@ -51,4 +51,4 @@ def test(model_folder_name):
 
         test_network(session, training_inputs, training_targets, 50, training_inputs_mean, training_inputs_std,
                      training_data, 'testing', decoded, dense_hypothesis, inputs, seq_len, input_dropout_keep,
-                     output_dropout_keep, state_dropout_keep, affine_dropout_keep, int_to_char, '.', 'testt.txt', dense_targets, targets)
+                     output_dropout_keep, state_dropout_keep, affine_dropout_keep, int_to_char, '.', 'testt.txt')

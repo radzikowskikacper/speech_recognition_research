@@ -123,8 +123,10 @@ def train(arguments):
                         input_dropout_keep: input_dropout_keep_prob,
                         output_dropout_keep: output_dropout_keep_prob,
                         state_dropout_keep: state_dropout_keep_prob,
-                        affine_dropout_keep: affine_dropout_keep_prob
+                        affine_dropout_keep: affine_dropout_keep_prob,
                         }
+                if 'learning_rate' in locals():
+                    feed[learning_rate] = initial_learning_rate
 
                 session.run(optimizer, feed)
 

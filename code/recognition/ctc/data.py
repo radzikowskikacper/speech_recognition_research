@@ -166,6 +166,14 @@ def load_data_from_file(path, num_features, samples = None):
 
     return data
 
+def save_dataset(model_folder_name, training_data, validation_data, testing_data):
+    with open('{}/{}'.format(model_folder_name, 'training.txt'), 'w+') as f:
+        f.write('\n'.join([d[0] for d in training_data]))
+    with open('{}/{}'.format(model_folder_name, 'testing.txt'), 'w+') as f:
+        f.write('\n'.join([d[0] for d in testing_data]))
+    with open('{}/{}'.format(model_folder_name, 'validation.txt'), 'w+') as f:
+        f.write('\n'.join([d[0] for d in validation_data]))
+
 def load_data_sets(directory):
     training_data = load_data_from_file(os.path.join(directory, 'training.txt'), [20, 13, 1])
     testing_data = load_data_from_file(os.path.join(directory, 'testing.txt'), [20, 13, 1])

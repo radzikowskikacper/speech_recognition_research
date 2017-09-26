@@ -50,19 +50,8 @@ def plot(train_losses, val_losses, train_errors, val_errors, fname):
     plt.savefig("{}{}".format(fname, error_plot_fname))
     plt.close()
 
-def save_dataset(model_folder_name, training_data, validation_data, testing_data):
-    with open('{}/{}'.format(model_folder_name, 'training.txt'), 'w+') as f:
-        f.write('\n'.join([d[0] for d in training_data]))
-    with open('{}/{}'.format(model_folder_name, 'testing.txt'), 'w+') as f:
-        f.write('\n'.join([d[0] for d in testing_data]))
-    with open('{}/{}'.format(model_folder_name, 'validation.txt'), 'w+') as f:
-        f.write('\n'.join([d[0] for d in validation_data]))
-
 # THE MAIN CODE!
 def train(arguments):
-    model_folder_name = '../data/umeerj/checkpoints/{}/{}'.format('_'.join([str(arg) for arg in arguments]),
-                                                                  datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-
     # Some configs
     num_features = 13
 
@@ -88,9 +77,19 @@ def train(arguments):
 
     graph = tf.Graph()
     with graph.as_default():
-        inputs, targets, seq_len, input_dropout_keep, output_dropout_keep, state_dropout_keep, \
-        affine_dropout_keep, cost, ler, ler2, ler3, dense_hypothesis, dense_targets, decoded, optimizer \
-            = model.create_model(num_features, num_hidden, num_layers, num_classes, initial_learning_rate, momentum, batch_size)
+        if len(arguments) == 11:
+            model_folder_name = '../data/umeerj/checkpoints/{}/{}'.format('_'.join([str(arg) for arg in arguments]),
+                                                                          datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            inputs, targets, seq_len, input_dropout_keep, output_dropout_keep, state_dropout_keep, \
+            affine_dropout_keep, cost, ler, ler2, ler3, dense_hypothesis, dense_targets, decoded, optimizer \
+                = model.create_model(num_features, num_hidden, num_layers, num_classes, initial_learning_rate, momentum,
+                                     batch_size)
+        else:
+            model_folder_name = arguments[11]
+            inputs, targets, seq_len, input_dropout_keep, output_dropout_keep, state_dropout_keep, \
+            affine_dropout_keep, cost, ler, ler2, ler3, dense_hypothesis, dense_targets, decoded, optimizer \
+                = model.load_existing_model(model_folder_name)
+
         trainable_parameters = get_total_params_num()
         print("{} trainable parameters".format(trainable_parameters))
 
@@ -99,7 +98,6 @@ def train(arguments):
     with tf.Session(graph=graph, config=config) as session:
         signal.signal(signal.SIGINT, sigint_handler)
         os.makedirs(model_folder_name)
-        #save_dataset(model_folder_name, training_data, validation_data, testing_data)
 
         # Initializate the weights and biases
         tf.global_variables_initializer().run()
@@ -205,37 +203,3 @@ def train(arguments):
                              training_data, 'training', decoded, dense_hypothesis, inputs, seq_len, input_dropout_keep,
                              output_dropout_keep, state_dropout_keep, affine_dropout_keep, int_to_char, model_folder_name,
                              final_outcomes_fname)
-
-def load_and_test():
-    training_inputs, training_targets, training_inputs_mean, training_inputs_std, \
-    validation_data, validation_inputs, validation_targets, \
-    testing_data, testing_inputs, testing_targets, \
-    int_to_char, num_classes = divide_data(10000, 0.7, 0.15)
-    batch_size = 25
-
-    saver = tf.train.import_meta_graph('../data/umeerj/checkpoints/2000_1000_3_25_0.0005_0.9_10000_1_0.7_0.15/model.meta')
-    with tf.Session() as sess:
-        # First let's load meta graph and restore weights
-        #saver = tf.train.import_meta_graph('my_test_model-0')
-        saver.restore(sess, tf.train.latest_checkpoint('../data/umeerj/checkpoints/2000_1000_3_25_0.0005_0.9_10000_1_0.7_0.15/'))
-        graph = tf.get_default_graph()
-        decoded = graph.get_tensor_by_name('CTCGreedyDecoder:1')
-        input_samples = graph.get_tensor_by_name('input_samples:0')
-        dropout_keep = graph.get_tensor_by_name('dropout:0')
-        input_sequence_length = graph.get_tensor_by_name('input_sequence_length:0')
-        #print('\n'.join([n.name for n in graph.as_graph_def().node]))
-
-        for i, (test_input, _, test_seq_len, _) in \
-                enumerate(
-                    data.batch_generator(testing_inputs, testing_targets, batch_size, training_inputs_mean,
-                                         training_inputs_std)):
-            d = sess.run(decoded, feed_dict={
-                input_samples: test_input, input_sequence_length: test_seq_len, dropout_keep:1
-            })
-            #str_decoded = ''.join([chr(x) for x in np.asarray(d) + FIRST_INDEX])
-            str_decoded = ''.join([int_to_char[x] for x in np.asarray(d)])
-            # Replacing blank label to none
-            str_decoded = str_decoded.replace(chr(ord('z') + 1), '<BLANK>')
-            # Replacing space label to space
-            str_decoded = str_decoded.replace('<space>', ' ')
-            print('Decoded:\n{}'.format(str_decoded))

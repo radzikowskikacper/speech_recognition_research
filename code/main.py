@@ -17,8 +17,14 @@ if __name__ == '__main__':
     #training.main2()
     #os._exit(0)
 
+    #from recognition.ctc import testing
+    #testing.test('../data/umeerj/checkpoints/1_5000_1000_3_28_0.0001_0.9_70000_1_0.2_1_1_0.8_0.1_3_1/2017-09-17 11:58:52.824927')
+    #os._exit(0)
+
     from recognition.ctc import training
     if len(arguments) > 1:
         training.train(sys.argv[1:])
     else:
-        training.train(['default', 500, 50, 1, 50, 0.005, 0.9, 1, 1, 1, 1])
+        training.train(['default', 500, 50, 1, 50, 0.005, 0.9, 1, 1, 1, 1,
+                        #'../data/umeerj/checkpoints/1_5000_1000_3_28_0.0001_0.9_70000_1_0.2_1_1_0.8_0.1_3_1/2017-09-17 11:58:52.824927'
+                        ])

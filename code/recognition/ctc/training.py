@@ -65,22 +65,23 @@ def train(arguments):
     output_dropout_keep_prob = float(arguments[6])
     state_dropout_keep_prob = float(arguments[7])
     affine_dropout_keep_prob = float(arguments[8])
+    dataset = arguments[9]
 
     # Dividing the data
     training_data, training_inputs, training_targets, training_inputs_mean, training_inputs_std, \
     validation_data, validation_inputs, validation_targets, \
     testing_data, testing_inputs, testing_targets, \
     int_to_char, num_classes, num_samples = \
-        data.load_data_sets('../data/umeerj/10k')
+        data.load_data_sets('../data/umeerj/{}'.format(dataset))
     print('{} samples without padding'.format(num_samples))
 
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
     with tf.Session(config=config) as session:
         if training_mode == 'new':
-            num_hidden = int(arguments[9])
-            num_layers = int(arguments[10])
-            momentum = float(arguments[11])
+            num_hidden = int(arguments[10])
+            num_layers = int(arguments[11])
+            momentum = float(arguments[12])
             model_folder_name = '../data/umeerj/checkpoints/{}/{}'.format('_'.join([str(arg) for arg in arguments]),
                                                                           datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             inputs, targets, seq_len, input_dropout_keep, output_dropout_keep, state_dropout_keep, \
@@ -89,7 +90,7 @@ def train(arguments):
             tf.global_variables_initializer().run()
             tf.local_variables_initializer().run()
         else:
-            model_folder_name = old_foolder_name = arguments[9]
+            model_folder_name = old_foolder_name = arguments[10]
             inputs, targets, seq_len, input_dropout_keep, output_dropout_keep, state_dropout_keep, \
             affine_dropout_keep, cost, ler, ler2, ler3, dense_hypothesis, dense_targets, decoded, optimizer \
                 = model.load_existing_model(model_folder_name, session)

@@ -25,5 +25,5 @@ if __name__ == '__main__':
     if len(arguments) > 1:
         training.train(sys.argv[1:])
     else:
-        #training.train(['default', 'new', 50, 0.005, 500, 1, 1, 1, 1, 50, 1, 0.9])
-        training.train(['default', 'load', 5, 0.005, 500, 1, 1, 1, 1, '../data/umeerj/checkpoints/0_5000_500_2_40_0.0001_0.9_1_0.2_1_1/2017-09-22 10:22:52/'])
+        #training.train(['default', 'new', 50, 0.005, 500, 1, 1, 1, 1, '10k', 50, 1, 0.9])
+        training.train(['default', 'load', 5, 0.005, 500, 1, 1, 1, 1, '70k', '../data/umeerj/checkpoints/0_5000_500_2_40_0.0001_0.9_1_0.2_1_1/2017-09-22 10:22:52/'])

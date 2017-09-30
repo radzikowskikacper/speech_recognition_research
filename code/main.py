@@ -13,9 +13,9 @@ if __name__ == '__main__':
     #from recognition.wavenet import train
     #train.train()
 
-    #from language_model import training
-    #training.main2()
-    #os._exit(0)
+    from language_model import training
+    training.main2()
+    os._exit(0)
 
     #from recognition.ctc import testing
     #testing.test('../data/umeerj/checkpoints/0_5000_500_2_40_0.0001_0.9_1_0.2_1_1/2017-09-22 10:22:52/')

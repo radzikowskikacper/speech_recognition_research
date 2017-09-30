@@ -327,7 +327,7 @@ def run_epoch(session, model, eval_op=None, verbose=False, id_to_word = None):
     logits = vals['logits']
     logits2 = vals['logits2']
 
-    print('\n'.join([' '.join([id_to_word[id] for id in line]) for line in logits2]))
+    #print('\n'.join([' '.join([id_to_word[id] for id in line]) for line in logits2]))
 
     costs += cost
     iters += model.input.num_steps
@@ -362,6 +362,8 @@ def get_config():
 
 
 def main(_):
+  FLAGS.data_path = '/home/kapi/Desktop/simple-examples/data/'
+  FLAGS.model = 'large'
   if not FLAGS.data_path:
     raise ValueError("Must set --data_path to PTB data directory")
   gpus = [

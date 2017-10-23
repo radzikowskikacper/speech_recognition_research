@@ -24,7 +24,11 @@ def get_sample():
     angle2 %= 2 * np.pi
     return np.array([np.array([
         5 + 5 * np.sin(angle1) + 10 * np.cos(angle2),
-        7 + 7 * np.sin(angle2) + 14 * np.cos(angle1)])])
+        #7 + 7 * np.sin(angle2) + 14 * np.cos(angle1),
+        #angle1,
+        #angle2,
+        #angle1 + angle2,
+    ])])
 
 
 sliding_window = []
@@ -43,13 +47,14 @@ def get_pair():
     global sliding_window
     sliding_window.append(get_sample())
     input_value = sliding_window[0]
+    input_value = np.array(sliding_window[:-1])
     output_value = sliding_window[-1]
     sliding_window = sliding_window[1:]
     return input_value, output_value
 
 
 # Input Params
-input_dim = 2
+input_dim = 1
 
 # To maintain state
 last_value = np.array([0 for i in range(input_dim)])
@@ -64,40 +69,45 @@ def get_total_input_output():
     """
     global last_value, last_derivative
     raw_i, raw_o = get_pair()
-    raw_i = raw_i[0]
-    l1 = list(raw_i)
+    #raw_i = raw_i[0]
+    l1 = raw_i
     derivative = raw_i - last_value
-    l2 = list(derivative)
+    l2 = np.array(derivative)
     last_value = raw_i
-    l3 = list(derivative - last_derivative)
+    l3 = np.array(derivative - last_derivative)
     last_derivative = derivative
-    return np.array([l1 + l2 + l3]), raw_o
+    ret = np.array([l1 + l2 + l3])
+    ret = np.hstack((l1, l2, l3))
+    ret = np.reshape(ret, [1, 22, -1])
 
-
-# Input Params
-input_dim = 2
+    return ret, raw_o
 
 ##The Input Layer as a Placeholder
 # Since we will provide data sequentially, the 'batch size'
 # is 1.
-input_layer = tf.placeholder(tf.float32, [1, input_dim * 3])
-
+input_layer = tf.placeholder(tf.float32, [1, 22, input_dim * 3])
+#input_layer = tf.placeholder(tf.float32, [1, input_dim * 3])
 
 ##The LSTM Layer-1
 # The LSTM Cell initialization
-lstm_layer1 = tf.contrib.rnn.BasicLSTMCell(input_dim * 3)
+#lstm_layer1 = tf.contrib.rnn.BasicLSTMCell(input_dim * 3)
+def make_cell():
+    return tf.contrib.rnn.LSTMCell(2 * input_dim * 3, state_is_tuple=True, initializer=tf.contrib.layers.xavier_initializer())
 # The LSTM state as a Variable initialized to zeroes
-#lstm_state1 = tf.Variable(tf.zeros([1, lstm_layer1.state_size]))
-lstm_state1 = (tf.Variable(tf.zeros([1, input_dim * 3])),) * 2
+#lstm_state1 = (tf.Variable(tf.zeros([1, input_dim * 3])),) * 2
 
-#os._exit(0)
 # Connect the input layer and initial LSTM state to the LSTM cell
-lstm_output1, lstm_state_output1 = lstm_layer1(input_layer, lstm_state1,
-                                               scope='LSTM1')
+#lstm_output1, lstm_state_output1 = lstm_layer1(input_layer, lstm_state1, scope='LSTM1')
+
 # The LSTM state will get updated
-#lstm_update_op1 = lstm_state1.assign(lstm_state_output1)
-lstm_update_op1 = tf.assign(lstm_state1[0], lstm_state_output1[0])
-lstm_update_op2 = tf.assign(lstm_state1[1], lstm_state_output1[1])
+#lstm_update_op1 = tf.assign(lstm_state1[0], lstm_state_output1[0])
+#lstm_update_op2 = tf.assign(lstm_state1[1], lstm_state_output1[1])
+
+stack = tf.contrib.rnn.MultiRNNCell(
+    [make_cell() for _ in range(1)])
+
+lstm_output1, _ = tf.nn.dynamic_rnn(stack, input_layer, [1], dtype=tf.float32, parallel_iterations=1024)
+lstm_output1 = tf.reshape(lstm_output1, [-1, input_dim * 3])
 
 ##The Regression-Output Layer1
 # The Weights and Biases matrices first
@@ -110,15 +120,18 @@ final_output = tf.matmul(lstm_output1, output_W1) + output_b1
 correct_output = tf.placeholder(tf.float32, [1, input_dim])
 
 ##Calculate the Sum-of-Squares Error
-error = tf.pow(final_output - correct_output, 2)
+error = tf.reduce_sum(tf.pow(final_output - correct_output, 2))
 
 ##The Optimizer
 # Adam works best
 train_step = tf.train.AdamOptimizer(0.0006).minimize(error)
+train_step = tf.train.MomentumOptimizer(learning_rate=0.01, momentum=0.9).minimize(error)
 
 ##Session
 
-with tf.Session() as sess:
+config = tf.ConfigProto()
+config.gpu_options.allow_growth=True
+with tf.Session(config=config) as sess:
     # Initialize all Variables
     tf.local_variables_initializer().run()
     tf.global_variables_initializer().run()
@@ -134,7 +147,7 @@ with tf.Session() as sess:
     for i in range(0, 80000, 1):
         input_v, output_v = get_total_input_output()
         #'''
-        _, _, _, network_output, err = sess.run([lstm_update_op1, lstm_update_op2,
+        _, network_output, err = sess.run([#lstm_update_op1, lstm_update_op2,
                                          train_step,
                                          final_output, error],
                                         feed_dict={
@@ -146,9 +159,9 @@ with tf.Session() as sess:
         if i % 2000 != 0:
             continue
         network_output1.append(network_output[0][0])
-        network_output2.append(network_output[0][1])
+        #network_output2.append(network_output[0][4])
         actual_output1.append(output_v[0][0])
-        actual_output2.append(output_v[0][1])
+        #actual_output2.append(output_v[0][4])
         x_axis.append(i)
         print('{} / {}, {}'.format(i, 80000, err))
 
@@ -156,8 +169,8 @@ import matplotlib.pyplot as plt
 
 plt.plot(x_axis, network_output1, 'r-', x_axis, actual_output1, 'b-')
 plt.show()
-plt.plot(x_axis, network_output2, 'r-', x_axis, actual_output2, 'b-')
-plt.show()
+#plt.plot(x_axis, network_output2, 'r-', x_axis, actual_output2, 'b-')
+#plt.show()
 
 os._exit(0)
 

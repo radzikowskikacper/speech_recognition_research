@@ -1,6 +1,7 @@
 ##Producing Training/Testing inputs+output
 from random import random
 import os, tensorflow as tf, numpy as np
+from . import model as model
 
 # Random initial angles
 angle1 = random()
@@ -82,50 +83,9 @@ def get_total_input_output():
 
     return ret, raw_o
 
-##The Input Layer as a Placeholder
-# Since we will provide data sequentially, the 'batch size'
-# is 1.
-input_layer = tf.placeholder(tf.float32, [1, 22, input_dim * 3])
-#input_layer = tf.placeholder(tf.float32, [1, input_dim * 3])
 
-##The LSTM Layer-1
-# The LSTM Cell initialization
-#lstm_layer1 = tf.contrib.rnn.BasicLSTMCell(input_dim * 3)
-def make_cell():
-    return tf.contrib.rnn.LSTMCell(2 * input_dim * 3, state_is_tuple=True, initializer=tf.contrib.layers.xavier_initializer())
-# The LSTM state as a Variable initialized to zeroes
-#lstm_state1 = (tf.Variable(tf.zeros([1, input_dim * 3])),) * 2
-
-# Connect the input layer and initial LSTM state to the LSTM cell
-#lstm_output1, lstm_state_output1 = lstm_layer1(input_layer, lstm_state1, scope='LSTM1')
-
-# The LSTM state will get updated
-#lstm_update_op1 = tf.assign(lstm_state1[0], lstm_state_output1[0])
-#lstm_update_op2 = tf.assign(lstm_state1[1], lstm_state_output1[1])
-
-stack = tf.contrib.rnn.MultiRNNCell(
-    [make_cell() for _ in range(1)])
-
-lstm_output1, _ = tf.nn.dynamic_rnn(stack, input_layer, [1], dtype=tf.float32, parallel_iterations=1024)
-lstm_output1 = tf.reshape(lstm_output1, [-1, input_dim * 3])
-
-##The Regression-Output Layer1
-# The Weights and Biases matrices first
-output_W1 = tf.Variable(tf.truncated_normal([input_dim * 3, input_dim]))
-output_b1 = tf.Variable(tf.zeros([input_dim]))
-# Compute the output
-final_output = tf.matmul(lstm_output1, output_W1) + output_b1
-
-##Input for correct output (for training)
-correct_output = tf.placeholder(tf.float32, [1, input_dim])
-
-##Calculate the Sum-of-Squares Error
-error = tf.reduce_sum(tf.pow(final_output - correct_output, 2))
-
-##The Optimizer
-# Adam works best
-train_step = tf.train.AdamOptimizer(0.0006).minimize(error)
-train_step = tf.train.MomentumOptimizer(learning_rate=0.01, momentum=0.9).minimize(error)
+inputs, targets, seq_len, input_dropout_keep, output_dropout_keep, state_dropout_keep, error, train_step, \
+learning_rate, final_output = model.create_model(13, 100, 2, 0.9, 100)
 
 ##Session
 
@@ -151,8 +111,8 @@ with tf.Session(config=config) as sess:
                                          train_step,
                                          final_output, error],
                                         feed_dict={
-                                            input_layer: input_v,
-                                            correct_output: output_v})
+                                            inputs: input_v,
+                                            targets: output_v})
 
         #'''
         #network_output = [[0, 0]]

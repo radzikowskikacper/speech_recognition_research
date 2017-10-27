@@ -2,6 +2,8 @@
 from random import random
 import os, tensorflow as tf, numpy as np
 from . import model as model
+from recognition.ctc import data as ctc_data
+from utils import utils
 
 # Random initial angles
 angle1 = random()
@@ -25,7 +27,7 @@ def get_sample():
     angle2 %= 2 * np.pi
     return np.array([np.array([
         5 + 5 * np.sin(angle1) + 10 * np.cos(angle2),
-        #7 + 7 * np.sin(angle2) + 14 * np.cos(angle1),
+        7 + 7 * np.sin(angle2) + 14 * np.cos(angle1),
         #angle1,
         #angle2,
         #angle1 + angle2,
@@ -49,13 +51,16 @@ def get_pair():
     sliding_window.append(get_sample())
     input_value = sliding_window[0]
     input_value = np.array(sliding_window[:-1])
-    output_value = sliding_window[-1]
+    input_value = np.reshape(input_value, (1, 22, input_dim))
+    output_value = np.array([sliding_window[-1]])
+    output_value = np.array(sliding_window[1:])
+    output_value = np.reshape(output_value, (1, 22, input_dim))
     sliding_window = sliding_window[1:]
     return input_value, output_value
 
 
 # Input Params
-input_dim = 1
+input_dim = 13
 
 # To maintain state
 last_value = np.array([0 for i in range(input_dim)])
@@ -73,25 +78,45 @@ def get_total_input_output():
     #raw_i = raw_i[0]
     l1 = raw_i
     derivative = raw_i - last_value
-    l2 = np.array(derivative)
+    l2 = np.array(derivative) / 2
     last_value = raw_i
-    l3 = np.array(derivative - last_derivative)
+    l3 = np.array(derivative - last_derivative) / 3
     last_derivative = derivative
     ret = np.array([l1 + l2 + l3])
-    ret = np.hstack((l1, l2, l3))
+    ret = np.stack((l1))#, l2, l3), 2)
     ret = np.reshape(ret, [1, 22, -1])
 
     return ret, raw_o
 
+batch_size = 1
+num_hidden = 728
+num_features = input_dim
+layers = 1
 
-inputs, targets, seq_len, input_dropout_keep, output_dropout_keep, state_dropout_keep, error, train_step, \
-learning_rate, final_output = model.create_model(13, 100, 2, 0.9, 100)
-
-##Session
+#'''
+training_data, training_inputs, training_targets, training_inputs_mean, training_inputs_std, \
+validation_data, validation_inputs, validation_targets, \
+testing_data, testing_inputs, testing_targets, \
+int_to_char, num_classes, num_samples = \
+    ctc_data.load_data_sets('../data/umeerj/10k')
+print('{} samples without padding'.format(num_samples))
 
 config = tf.ConfigProto()
 config.gpu_options.allow_growth=True
 with tf.Session(config=config) as sess:
+    '''
+    inputs, targets, seq_len, input_dropout_keep, output_dropout_keep, state_dropout_keep, error, train_step, \
+    learning_rate, final_output = model.create_model(num_features, num_hidden, 2, 0.9, batch_size)
+    '''
+
+    # inputs, targets, error, train_step, final_output \
+    #    = model.create_model(num_features, num_hidden, 1, 0.9, 1, input_dim)#model.get_model2(input_dim * 30)
+
+    inputs, targets, seq_len, input_dropout_keep, output_dropout_keep, state_dropout_keep, error, train_step, \
+    learning_rate, final_output = model.create_model(num_features, num_hidden, layers, 0.9, batch_size, input_dim)
+
+    print('{} total parameters'.format(utils.get_total_params_num()))
+
     # Initialize all Variables
     tf.local_variables_initializer().run()
     tf.global_variables_initializer().run()
@@ -105,17 +130,50 @@ with tf.Session(config=config) as sess:
     x_axis = []
 
     for i in range(0, 80000, 1):
+        train_error = 0
+        j = 0
+
+#        '''
+        for train_inputs, train_targets, train_seq_len, _ in \
+                ctc_data.batch_generator(training_inputs, training_targets, batch_size, training_inputs_mean,
+                                     training_inputs_std):
+            train_targets = np.zeros_like(train_inputs)
+            #train_inputs = np.array(train_inputs)
+            train_targets[:,:-1] = train_inputs[:,1:]
+            train_targets[:,-1] = train_inputs[:,0]
+            _, err = sess.run([train_step, error], {
+                                inputs : train_inputs,
+                                seq_len : train_seq_len,
+    #                            input_dropout_keep : 1,
+    #                            output_dropout_keep : 1,
+    #                            state_dropout_keep : 1,
+    #                            learning_rate : 0.01,
+                                targets : train_targets,
+                            })
+    #            j += 1
+            train_error += err / (len(train_inputs) * num_features)
+            #print(err, train_error)
+#            break
+        print('{} / {}, Error: {}'.format(i + 1, 80000, train_error))
+
+        continue
+#        '''
+
         input_v, output_v = get_total_input_output()
+        sq = np.array([22])
         #'''
         _, network_output, err = sess.run([#lstm_update_op1, lstm_update_op2,
                                          train_step,
                                          final_output, error],
                                         feed_dict={
                                             inputs: input_v,
-                                            targets: output_v})
+                                            targets: output_v,
+                                        seq_len: sq})
 
         #'''
         #network_output = [[0, 0]]
+        network_output = network_output[0]
+        output_v = output_v[0]
         if i % 2000 != 0:
             continue
         network_output1.append(network_output[0][0])
@@ -126,7 +184,7 @@ with tf.Session(config=config) as sess:
         print('{} / {}, {}'.format(i, 80000, err))
 
 import matplotlib.pyplot as plt
-
+print('printing')
 plt.plot(x_axis, network_output1, 'r-', x_axis, actual_output1, 'b-')
 plt.show()
 #plt.plot(x_axis, network_output2, 'r-', x_axis, actual_output2, 'b-')

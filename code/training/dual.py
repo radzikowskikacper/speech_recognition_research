@@ -3,145 +3,122 @@
 import gym
 import numpy as np
 import tensorflow as tf
+import os
 
-class PolicyGradientAgent(object):
-    def __init__(self, hparams, sess):
-        # initialization
-        self._s = sess
+from recognition.ctc import model as recognition_model
+from speech_model import model as speech_model
+#from generation import model as synthesis_model
+from language_model import model as language_model
 
-        # build the graph
-        self._input = tf.placeholder(tf.float32,
-                shape=[None, hparams['input_size']])
+def load_models(session):
+    models = dict()
 
-        hidden1 = tf.contrib.layers.fully_connected(
-                inputs=self._input,
-                num_outputs=hparams['hidden_size'],
-                activation_fn=tf.nn.relu)#,
-                #weights_initializer=tf.random_normal)
+    dev1 = '/gpu:1'
+    dev0 = '/gpu:0'
 
-        logits = tf.contrib.layers.fully_connected(
-                inputs=hidden1,
-                num_outputs=hparams['num_actions'],
-                activation_fn=None)
+    with tf.Session() as session:
+        with tf.device(dev0):
+            temp = recognition_model.load_existing_model(
+                    '../data/umeerj/models/recognition/0_5000_500_2_40_0.0001_0.9_1_0.2_1_1/2017-09-22 10:22:52/', session)
+            models['recognition'] = {'inputs' : temp[0], 'targets' : temp[1], 'seq_len' : temp[2],
+                                         'input_dropout_keep' : temp[3], 'output_dropout_keep' : temp[4],
+                                         'state_dropout_keep' : temp[5], 'affine_dropout_keep' : temp[6],
+                                         'cost' : temp[7], 'ler' : temp[8], 'ler2' : temp[9], 'ler3' : temp[10],
+                                         'dense_hypothesis' : temp[11], 'dense_targets' : temp[12], 'decoded' : temp[13],
+                                         'optimizer' : temp[14]}
 
-        # op to sample an action
-        self._sample = tf.reshape(tf.multinomial(logits, 1), [])
+            temp = speech_model.load_existing_model(
+                    '../data/umeerj/models/speech_model', session)
+            models['speech_model'] = {'inputs' : temp[0], 'targets' : temp[1], 'seq_len' : temp[2],
+                                         'input_dropout_keep' : temp[3], 'output_dropout_keep' : temp[4],
+                                         'state_dropout_keep' : temp[5], 'affine_dropout_keep' : temp[6],
+                                         'cost' : temp[7], 'ler' : temp[8], 'ler2' : temp[9], 'ler3' : temp[10],
+                                         'dense_hypothesis' : temp[11], 'dense_targets' : temp[12], 'decoded' : temp[13],
+                                         'optimizer' : temp[14]}
 
-        # get log probabilities
-        log_prob = tf.log(tf.nn.softmax(logits))
+        #with tf.device(dev1):
+            temp = synthesis_model.load_existing_model(
+                    '../data/umeerj/models/synthesis', session)
+            models['synthesis'] = {}
 
-        # training part of graph
-        self._acts = tf.placeholder(tf.int32)
-        self._advantages = tf.placeholder(tf.float32)
+            temp = language_model.load_existing_model(
+                    '../data/umeerj/models/language_model', session)
+            models['language_model'] = {}
 
-        # get log probs of actions from episode
-        indices = tf.range(0, tf.shape(log_prob)[0]) * tf.shape(log_prob)[1] + self._acts
-        act_prob = tf.gather(tf.reshape(log_prob, [-1]), indices)
+    return models
 
-        # surrogate loss
-        loss = -tf.reduce_sum(tf.multiply(act_prob, self._advantages))
+def sample_sentence():
+    pass
 
-        # update
-        optimizer = tf.train.RMSPropOptimizer(hparams['learning_rate'])
-        self._train = optimizer.minimize(loss)
+def sample_recording():
+    pass
 
-    def act(self, observation):
-        # get one action, by sampling
-        return self._s.run(self._sample, feed_dict={self._input: [observation]})
+def synth(sentence):
+    pass
 
-    def train_step(self, obs, acts, advantages):
-        batch_feed = { self._input: obs, \
-                self._acts: acts, \
-                self._advantages: advantages }
-        self._s.run(self._train, feed_dict=batch_feed)
+def recognize(recording, session, models):
+    #TODO
+    int_to_char = {}
 
-def policy_rollout(env, agent):
-    """Run one episode."""
+    d, dh = session.run([models['recognize']['decoded'][0], models['recognize']['dense_hypothesis']],
+                        {
+                            models['recognize']['inputs']: test_input,
+                            models['recognize']['seq_len'] : test_seq_len,
+                            models['recognize']['input_dropout_keep'] : 1,
+                            models['recognize']['output_dropout_keep']: 1,
+                            models['recognize']['state_dropout_keep']: 1,
+                            models['recognize']['affine_dropout_keep']: 1
+                        }
+                        )
 
-    observation, reward, done = env.reset(), 0, False
-    obs, acts, rews = [], [], []
+    dh = [f[:np.where(f == -1)[0][0] if -1 in f else len(f)] for f in dh]
+    decoded_results = [''.join([int_to_char[x] for x in hypothesis]) for hypothesis in np.asarray(dh)]
+    decoded_results = [s.replace('<space>', ' ') for s in decoded_results]
 
-    while not done:
+    for h in decoded_results:
+        print('{} -> {}\n'.format(data[j][1], h))
+        j += 1
 
-        env.render()
-        obs.append(observation)
+def estimate_sentence(sentence):
+    pass
 
-        action = agent.act(observation)
-        observation, reward, done, _ = env.step(action)
-
-        acts.append(action)
-        rews.append(reward)
-
-    return obs, acts, rews
-
-
-def process_rewards(rews):
-    """Rewards -> Advantages for one episode. """
-
-    # total reward: length of episode
-    return [len(rews)] * len(rews)
-
+def estimate_recording(recording):
+    pass
 
 def main():
+    models = load_models(None)
 
-    env = gym.make('CartPole-v0')
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
 
-    monitor_dir = '/tmp/cartpole_exp1'
-    env = gym.wrappers.Monitor(env, monitor_dir, force = True)
+    with tf.Session(config=config) as sess:
 
-    # hyper parameters
-    hparams = {
-            'input_size': env.observation_space.shape[0],
-            'hidden_size': 36,
-            'num_actions': env.action_space.n,
-            'learning_rate': 0.1
-    }
+        sentence_plh = tf.placeholder(tf.int32, (1, None))
 
-    # environment params
-    eparams = {
-            'num_batches': 40,
-            'ep_per_batch': 10
-    }
+        recording = synth(sentence_plh)
+        #TODO
+        imm_reward = estimate_recording(recording)
+        #TODO
 
-    with tf.Graph().as_default(), tf.Session() as sess:
+        reconstructed_sentence = recognize(recording, sess, models)
+        lt_reward = estimate_sentence(reconstructed_sentence)
+        total_reward = lt_reward + imm_reward
 
-        agent = PolicyGradientAgent(hparams, sess)
+        loss = -total_reward
+        optimizer = tf.train.RMSPropOptimizer(0.01)
 
-        sess.run(tf.global_variables_initializer())
+        #TODO
+        training_step_1 = optimizer.minimize(loss)
+        training_step_2 = optimizer.minimize(loss)
 
-        for batch in range(eparams['num_batches']):
+        while True:
+            sentence = sample_sentence()
 
-            print ('=====\nBATCH {}\n===='.format(batch))
+            _, _, rc_sentence = sess.run([training_step_1, training_step_2, reconstructed_sentence],
+                     feed_dict={
+                        sentence_plh : sentence
+                     })
 
-            b_obs, b_acts, b_rews = [], [], []
-
-            #TODO
-            #sample sentences from language model
-
-            #TODO
-            #sample audio from audio model
-
-            #TODO
-            #
-
-            for _ in range(eparams['ep_per_batch']):
-
-                obs, acts, rews = policy_rollout(env, agent)
-
-                print ('Episode steps: {}'.format(len(obs)))
-
-                b_obs.extend(obs)
-                b_acts.extend(acts)
-
-                advantages = process_rewards(rews)
-                b_rews.extend(advantages)
-
-            # update policy
-            # normalize rewards; don't divide by 0
-            b_rews = (b_rews - np.mean(b_rews)) / (np.std(b_rews) + 1e-10)
-
-            agent.train_step(b_obs, b_acts, b_rews)
-
-        env.close()
+            print('{} ->\n{}'.format(sentence, rc_sentence))
 
 main()

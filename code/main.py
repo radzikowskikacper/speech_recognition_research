@@ -6,7 +6,7 @@ if __name__ == '__main__':
     if len(arguments) > 1:
         pass
         #os.environ["CUDA_VISIBLE_DEVICES"] = str(arguments[1])
-    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+    #os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 
     #from preprocessing.loading.ctc_preprocessing import preprocess_data
     #preprocess_data('../data/umeerj/ume-erj/', '../data/umeerj/data2.dat')
@@ -17,12 +17,18 @@ if __name__ == '__main__':
     #os._exit(0)
 
     #from recognition.ctc import testing
-    #testing.test('../data/umeerj/checkpoints/0_5000_500_2_40_0.0001_0.9_1_0.2_1_1/2017-09-22 10:22:52/')
+    #testing.test('../data/umeerj/models/recognition/0_5000_500_2_40_0.0001_0.9_1_0.2_1_1/2017-09-22 10:22:52/')
 
     #from recognition.wavenet import train
     #train.train()
 
-    from training import dual
+    #from training import dual
+    import os
+
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+
+    from language_model.karnna import training
     os._exit(0)
 
     from speech_model import training
@@ -34,4 +40,4 @@ if __name__ == '__main__':
         training.train(sys.argv[1:])
     else:
         #training.train(['default', 'new', 50, 0.005, 500, 1, 1, 1, 1, '10k', 50, 1, 0.9])
-        training.train(['default', 'load', 5, 0.005, 500, 1, 1, 1, 1, '70k', '../data/umeerj/checkpoints/0_5000_500_2_40_0.0001_0.9_1_0.2_1_1/2017-09-22 10:22:52/'])
+        training.train(['default', 'load', 5, 0.005, 500, 1, 1, 1, 1, '10k', '../data/umeerj/checkpoints/0_5000_500_2_40_0.0001_0.9_1_0.2_1_1/2017-09-22 10:22:52/'])

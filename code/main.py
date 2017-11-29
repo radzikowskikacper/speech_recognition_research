@@ -4,8 +4,7 @@ import sys
 if __name__ == '__main__':
     arguments = sys.argv
     if len(arguments) > 1:
-        pass
-        #os.environ["CUDA_VISIBLE_DEVICES"] = str(arguments[1])
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(arguments[1])
     #os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 
     #from preprocessing.loading.ctc_preprocessing import preprocess_data
@@ -23,10 +22,6 @@ if __name__ == '__main__':
     #train.train()
 
     #from training import dual
-    import os
-
-    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
     from language_model.karnna import training
     os._exit(0)

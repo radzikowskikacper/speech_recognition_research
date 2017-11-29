@@ -74,18 +74,24 @@ def pick_top_n(preds, vocab_size, top_n=5):
 
 def sample(checkpoint, n_samples, lstm_size, vocab_size, prime="The "):
     samples = [c for c in prime]
-    model = CharRNN(len(vocab), lstm_size=lstm_size, sampling=True)
+    initial_state, inputs, targets, keep_probs, losss, final_state, optimizer, prediction = model.create_model(len(vocab),
+                                                                                                   batch_size=1,
+                                                                                                   num_steps=1,
+                                                                                                   lstm_size=lstm_size,
+                                                                                                   num_layers=num_layers,
+                                                                                                   learning_rate=learning_rate)
+
     saver = tf.train.Saver()
     with tf.Session() as sess:
         saver.restore(sess, checkpoint)
-        new_state = sess.run(model.initial_state)
+        new_state = sess.run(initial_state)
         for c in prime:
             x = np.zeros((1, 1))
             x[0, 0] = vocab_to_int[c]
-            feed = {model.inputs: x,
-                    model.keep_prob: 1.,
-                    model.initial_state: new_state}
-            preds, new_state = sess.run([model.prediction, model.final_state],
+            feed = {inputs: x,
+                    keep_prob: 1.,
+                    initial_state: new_state}
+            preds, new_state = sess.run([prediction, final_state],
                                         feed_dict=feed)
 
         c = pick_top_n(preds, len(vocab))
@@ -93,10 +99,10 @@ def sample(checkpoint, n_samples, lstm_size, vocab_size, prime="The "):
 
         for i in range(n_samples):
             x[0, 0] = c
-            feed = {model.inputs: x,
-                    model.keep_prob: 1.,
-                    model.initial_state: new_state}
-            preds, new_state = sess.run([model.prediction, model.final_state],
+            feed = {inputs: x,
+                    keep_prob: 1.,
+                    initial_state: new_state}
+            preds, new_state = sess.run([prediction, final_state],
                                         feed_dict=feed)
 
             c = pick_top_n(preds, len(vocab))

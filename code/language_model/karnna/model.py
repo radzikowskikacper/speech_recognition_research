@@ -75,4 +75,4 @@ def create_model(num_classes, batch_size=64, num_steps=50,
     train_op = tf.train.AdamOptimizer(learning_rate)
     optimizer = train_op.apply_gradients(zip(grads, tvars))
 
-    return initial_state, inputs, targets, keep_prob, loss, final_state, optimizer
+    return initial_state, inputs, targets, keep_prob, loss, final_state, optimizer, out

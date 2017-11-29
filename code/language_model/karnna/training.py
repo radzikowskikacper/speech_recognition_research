@@ -89,7 +89,7 @@ def sample(checkpoint, n_samples, lstm_size, vocab_size, prime="The "):
             x = np.zeros((1, 1))
             x[0, 0] = vocab_to_int[c]
             feed = {inputs: x,
-                    keep_prob: 1.,
+                    keep_probs: 1.,
                     initial_state: new_state}
             preds, new_state = sess.run([prediction, final_state],
                                         feed_dict=feed)
@@ -100,7 +100,7 @@ def sample(checkpoint, n_samples, lstm_size, vocab_size, prime="The "):
         for i in range(n_samples):
             x[0, 0] = c
             feed = {inputs: x,
-                    keep_prob: 1.,
+                    keep_probs: 1.,
                     initial_state: new_state}
             preds, new_state = sess.run([prediction, final_state],
                                         feed_dict=feed)

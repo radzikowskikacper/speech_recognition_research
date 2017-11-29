@@ -10,7 +10,7 @@ num_layers = 1          # Number of LSTM layers
 learning_rate = 0.001   # Learning rate
 keep_prob = 0.5
 
-epochs = 20
+epochs = 2
 # Save every N iterations
 save_every_n = 200
 
@@ -24,7 +24,7 @@ encoded = np.array([vocab_to_int[c] for c in text], dtype=np.int32)
 batches = data.get_batches(encoded, 10, 50)
 x, y = next(batches)
 
-initial_state, inputs, targets, keep_probs, losss, final_state, optimizer = model.create_model(len(vocab), batch_size=batch_size, num_steps=num_steps,
+initial_state, inputs, targets, keep_probs, losss, final_state, optimizer, _ = model.create_model(len(vocab), batch_size=batch_size, num_steps=num_steps,
                 lstm_size=lstm_size, num_layers=num_layers,
                 learning_rate=learning_rate)
 

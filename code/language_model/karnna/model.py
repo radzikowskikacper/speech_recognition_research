@@ -62,6 +62,16 @@ def create_model(num_classes, batch_size=64, num_steps=50,
     # Use softmax to get the probabilities for predicted characters
     out = tf.nn.softmax(logits, name='predictions')
 
+    logits2 = tf.reshape(logits, [batch_size, -1, num_classes])
+    probabilities = tf.nn.softmax(logits2)
+    mindex = tf.argmax(logits2, axis=2)
+    i = tf.constant(0)
+    prod = tf.constant(1, dtype=tf.float32)
+    while_condition = lambda i, prod: tf.less(i, num_steps)
+    def body(i, prod):
+        return [tf.add(i, 1), tf.multiply(prod, probabilities[0, i, tf.cast(mindex[0, i], tf.int32)])]
+    score = tf.while_loop(while_condition, body, [i, prod])[1]
+
     # Loss and optimizer (with gradient clipping)
     y_one_hot = tf.one_hot(targets, num_classes)
     y_reshaped = tf.reshape(y_one_hot, logits.get_shape())
@@ -75,4 +85,4 @@ def create_model(num_classes, batch_size=64, num_steps=50,
     train_op = tf.train.AdamOptimizer(learning_rate)
     optimizer = train_op.apply_gradients(zip(grads, tvars))
 
-    return initial_state, inputs, targets, keep_prob, loss, final_state, optimizer, out
+    return initial_state, inputs, targets, keep_prob, loss, final_state, optimizer, out, logits2, x_one_hot
